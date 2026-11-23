@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>預算帳本</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="預算帳本">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+:root{
+  --bg:#f1f4f8; --card:#fff; --ink:#0f172a; --mute:#64748b; --line:#e2e8f0;
+  --green:#059669; --green-l:#d1fae5; --amber:#d97706; --amber-l:#fef3c7;
+  --red:#e11d48; --red-l:#ffe4e6; --indigo:#4f46e5; --indigo-l:#e0e7ff; --slate:#0f172a;
+  --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang HK","PingFang TC","Noto Sans TC",sans-serif;
+  -webkit-text-size-adjust:100%}
+body{max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:calc(84px + var(--sab))}
+.num{font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+input,select,textarea{font:inherit;font-size:16px;color:var(--ink)}
+
+/* header */
+header{position:sticky;top:0;z-index:20;background:var(--slate);color:#fff;
+  padding:calc(10px + var(--sat)) 14px 10px;display:flex;align-items:center;gap:10px}
+header h1{font-size:16px;margin:0;flex:1;font-weight:700;line-height:1.2}
+header h1 small{display:block;font-size:11px;font-weight:500;color:#94a3b8;margin-top:1px}
+.month{background:#1e293b;border:1px solid #334155;color:#fff;border-radius:12px;padding:7px 10px;font-size:15px;font-weight:600;min-height:40px}
+.iconbtn{width:40px;height:40px;border-radius:12px;background:#1e293b;border:1px solid #334155;font-size:18px;display:flex;align-items:center;justify-content:center;color:#fff}
+
+main{padding:14px 14px 0}
+.tab{display:none}.tab.on{display:block}
+.card{background:var(--card);border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(15,23,42,.05);border:1px solid var(--line)}
+.card h2{font-size:15px;margin:0 0 12px;display:flex;align-items:center;gap:8px;justify-content:space-between}
+.card h2 .l{display:flex;align-items:center;gap:8px}
+.sub{font-size:12px;color:var(--mute)}
+.hero{background:linear-gradient(160deg,#0f172a,#1e293b);color:#fff;border:0}
+.hero .lab{font-size:12px;color:#94a3b8}
+.hero .big{font-size:40px;font-weight:800;letter-spacing:-.5px;margin:2px 0}
+.hero .of{font-size:13px;color:#94a3b8}
+.rate{display:inline-block;margin-top:10px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:700}
+.rate.ok{background:rgba(16,185,129,.18);color:#34d399;border:1px solid rgba(16,185,129,.4)}
+.rate.bad{background:rgba(244,63,94,.2);color:#fb7185;border:1px solid rgba(244,63,94,.45)}
+.bar{height:10px;border-radius:99px;background:#e2e8f0;overflow:hidden}
+.hero .bar{background:#1e293b;border:1px solid #334155}
+.bar>i{display:block;height:100%;border-radius:99px;transition:width .4s}
+.g{background:#10b981}.a{background:#f59e0b}.r{background:#f43f5e}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.stat{background:rgba(255,255,255,.07);border-radius:14px;padding:10px}
+.stat .k{font-size:11px;color:#94a3b8}.stat .v{font-size:15px;font-weight:700;margin-top:2px}
+
+.reserve{background:var(--indigo-l);border-radius:16px;padding:14px;margin-bottom:12px}
+.reserve .v{font-size:30px;font-weight:800;color:var(--indigo)}
+.reserve .k{font-size:12px;font-weight:600;color:#312e81}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;border-radius:14px;background:#f8fafc;border:1px solid #f1f5f9;margin-bottom:8px}
+.row .t{font-weight:600;font-size:14px}.row .s{font-size:11px;color:var(--mute);margin-top:2px}
+.row .a{font-weight:800;font-size:16px}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:8px}
+.note{font-size:12px;line-height:1.55;color:#92400e;background:var(--amber-l);border-radius:12px;padding:10px 12px;margin-top:4px}
+
+.pool{padding:14px 16px}
+.pool .top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pool .nm{display:flex;align-items:center;gap:10px;font-weight:700;font-size:15px;min-width:0}
+.pool .em{width:34px;height:34px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.pool .amt{display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 8px}
+.pool .amt b{font-size:22px}.pool .amt span{font-size:12px;color:var(--mute)}
+.chip{font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.chip.g{background:var(--green-l);color:#065f46}.chip.a{background:var(--amber-l);color:#92400e}.chip.r{background:var(--red-l);color:#9f1239}
+
+.seg{display:flex;height:14px;border-radius:99px;overflow:hidden;background:#e2e8f0;margin:6px 0 12px}
+.seg i{display:block;height:100%}
+.leg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.leg div{font-size:12px;color:var(--mute)}.leg b{display:block;font-size:15px;color:var(--ink);margin-top:1px}
+
+/* forms */
+label.f{display:block;font-size:12px;font-weight:700;color:#475569;margin:14px 0 6px}
+.inp{width:100%;padding:12px 14px;background:#f8fafc;border:1px solid var(--line);border-radius:14px;min-height:48px;outline:none}
+.inp:focus{border-color:#10b981;background:#fff;box-shadow:0 0 0 3px rgba(16,185,129,.18)}
+.amount{position:relative}
+.amount span{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:26px;font-weight:700;color:#94a3b8}
+.amount input{padding-left:40px;font-size:30px;font-weight:800;min-height:62px}
+.quick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.quick button{min-height:44px;border-radius:12px;background:#f1f5f9;font-size:13px;font-weight:700}
+.quick button.clr{background:var(--red-l);color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.opt{min-height:52px;padding:8px 12px;border-radius:14px;border:1.5px solid var(--line);background:#fff;text-align:left;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.opt small{display:block;font-size:11px;color:var(--mute);font-weight:500}
+.opt.sel{border-color:#10b981;background:#ecfdf5;color:#064e3b}
+.opt.sel.pay{border-color:var(--indigo);background:var(--indigo-l);color:#312e81}
+.opt .em{font-size:18px}
+.btn{width:100%;min-height:52px;border-radius:16px;background:var(--green);color:#fff;font-weight:800;font-size:16px;margin-top:18px;box-shadow:0 6px 14px rgba(5,150,105,.25)}
+.btn:active{transform:scale(.99)}
+.btn.ghost{background:#f1f5f9;color:var(--ink);box-shadow:none;margin-top:8px;font-size:14px;min-height:46px}
+.btn.danger{background:var(--red)}
+.hint{font-size:12px;line-height:1.55;color:#475569;background:#f1f5f9;border-radius:12px;padding:10px 12px;margin-top:12px}
+.hidden{display:none!important}
+.toggle{display:grid;grid-template-columns:1fr 1fr;background:#f1f5f9;border-radius:14px;padding:4px;gap:4px}
+.toggle button{min-height:42px;border-radius:11px;font-weight:700;font-size:14px;color:var(--mute)}
+.toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+
+/* list */
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.filters select{min-height:44px;border-radius:12px;border:1px solid var(--line);background:#fff;padding:0 10px}
+.tx{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f1f5f9}
+.tx:last-child{border-bottom:0}
+.tx .em{width:40px;height:40px;border-radius:12px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.tx .mid{flex:1;min-width:0}
+.tx .t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .s{font-size:12px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tx .amt{font-weight:800;font-size:15px;text-align:right}
+.tx .del{width:40px;height:40px;border-radius:12px;color:#94a3b8;font-size:16px}
+.tx .del:active{background:var(--red-l);color:var(--red)}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:7px;margin-left:6px;vertical-align:1px}
+.badge.c{background:var(--indigo-l);color:#3730a3}.badge.o{background:#f1f5f9;color:#475569}
+.empty{text-align:center;padding:36px 12px;color:var(--mute);font-size:13px;border:2px dashed var(--line);border-radius:16px}
+
+/* bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:25;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:var(--sab)}
+nav .in{display:grid;grid-template-columns:repeat(4,1fr);width:100%;max-width:520px}
+nav button{padding:8px 0 7px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:600;color:#94a3b8;min-height:56px}
+nav button .ic{font-size:21px;line-height:1;filter:grayscale(1);opacity:.6}
+nav button.on{color:var(--green)}
+nav button.on .ic{filter:none;opacity:1}
+
+/* sheets */
+.back{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:40;display:none;align-items:flex-end;justify-content:center}
+.back.on{display:flex}
+.sheet{background:#fff;width:100%;max-width:520px;max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;padding:6px 16px calc(24px + var(--sab));-webkit-overflow-scrolling:touch}
+.sheet .grab{width:42px;height:5px;border-radius:9px;background:#cbd5e1;margin:8px auto 12px}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.cfg-sec{margin-top:20px}
+.cfg-sec>.hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;font-size:13px;font-weight:800;color:#334155}
+.cfg-sec .add{color:var(--green);font-weight:700;font-size:13px;min-height:36px;padding:0 6px}
+.crow{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:10px;margin-bottom:8px;display:grid;gap:8px}
+.crow .r2{display:flex;gap:8px;align-items:center}
+.crow .r2>*{min-width:0}
+.crow .inp{min-height:44px;padding:8px 12px}
+.crow .x{width:44px;height:44px;border-radius:12px;background:#fff;border:1px solid var(--line);color:#94a3b8;flex-shrink:0}
+.crow label.chk{font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.crow label.chk input{width:20px;height:20px}
+.preview{background:#f1f5f9;border-radius:14px;padding:12px;font-size:13px;line-height:1.8;margin-top:14px}
+.preview .rw{display:flex;justify-content:space-between;gap:10px}
+.tools{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.tools button{min-height:46px;border-radius:12px;background:#f1f5f9;font-size:13px;font-weight:700}
+textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,monospace}
+.sync{font-size:10px;font-weight:600;color:#94a3b8}
+.sync.ok{color:#34d399}.sync.err{color:#fb7185}
+
+#toast{position:fixed;left:14px;right:14px;top:calc(62px + var(--sat));z-index:60;display:flex;flex-direction:column;gap:8px;pointer-events:none;align-items:center}
+.toast{background:#0f172a;color:#fff;font-size:13px;font-weight:600;padding:11px 16px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:100%;animation:in .25s ease}
+.toast.err{background:#9f1239}
+@keyframes in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>智控預算帳本<small><span id="syncTxt" class="sync">本機儲存</span></small></h1>
+  <input type="month" id="monthSel" class="month" aria-label="月份">
+  <button class="iconbtn" onclick="openConfig()" aria-label="設定">⚙️</button>
+</header>
+<div id="toast"></div>
+
+<main>
+  <!-- ============ 總覽 ============ -->
+  <section id="tab-home" class="tab on">
+    <div class="card hero">
+      <div class="lab">日常可動用餘額</div>
+      <div class="big num" id="remain">$0</div>
+      <div class="of num">/ 本月日常預算 <span id="totBudget">$0</span></div>
+      <div style="margin-top:14px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#94a3b8;margin-bottom:6px" class="num">
+          <span>已花 <b id="spentTxt" style="color:#fff">$0</b></span><span id="spentPct">0%</span>
+        </div>
+        <div class="bar"><i id="spentBar" class="g" style="width:0"></i></div>
+      </div>
+      <span id="rateBadge" class="rate ok num">儲蓄率 0%</span>
+      <div class="stats num">
+        <div class="stat"><div class="k">本月收入</div><div class="v" id="stIncome">$0</div></div>
+        <div class="stat"><div class="k">固定支出</div><div class="v" id="stFixed" style="color:#fcd34d">$0</div></div>
+        <div class="stat"><div class="k">計劃投資</div><div class="v" id="stPlan" style="color:#34d399">$0</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="l">💳 信用卡待還款預留</span></h2>
+      <div class="reserve">
+        <div class="k">卡數專用池（BOC + HSBC）</div>
+        <div class="v num" id="reserveTotal">$0</div>
+        <div class="sub" style="margin-top:2px">已計入上方已花金額，請勿動用</div>
+      </div>
+      <div class="row">
+        <div><div class="t"><span class="dot" style="background:#be123c"></span>BOC 信用卡</div>
+          <div class="s num" id="bocSub">直刷 $0 · 八達通 $0</div></div>
+        <div class="a num" id="bocTot">$0</div>
+      </div>
+      <div class="row">
+        <div><div class="t"><span class="dot" style="background:#dc2626"></span>HSBC 信用卡</div>
+          <div class="s num" id="hsbcSub">直刷 $0 · PayMe $0</div></div>
+        <div class="a num" id="hsbcTot">$0</div>
+      </div>
+      <div class="row">
+        <div><div class="t"><span class="dot" style="background:#059669"></span>現金（即時已扣）</div></div>
+        <div class="a num" id="cashTot">$0</div>
+      </div>
+      <div class="note">八達通 → 自動計入 BOC；PayMe → 自動計入 HSBC。每筆消費只記一次，<b>不要</b>另外記八達通增值或 PayMe 補錢，否則會重複計算。</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="l">🎯 本月儲蓄去向</span><span class="sub num" id="saveTotTxt"></span></h2>
+      <div class="seg" id="saveSeg"></div>
+      <div class="leg num" id="saveLeg"></div>
+      <div class="hint">儲蓄 = 收入 − 固定支出 − 已花日常。在「投資」頁記錄的金額會歸入貨幣基金／股票，<b>其餘自動算作現金</b>。</div>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px">
+      <b style="font-size:15px">📊 日常預算池</b>
+      <button class="sub" style="font-weight:700;color:var(--green);min-height:36px" onclick="openConfig()">調整上限</button>
+    </div>
+    <div id="pools"></div>
+
+    <div class="card">
+      <h2><span class="l">🔒 每月固定項目</span></h2>
+      <div id="locked"></div>
+    </div>
+  </section>
+
+  <!-- ============ 記帳 ============ -->
+  <section id="tab-add" class="tab">
+    <div class="card">
+      <h2><span class="l">⚡ 3 秒記一筆</span></h2>
+      <form id="txForm" onsubmit="addTx(event)">
+        <label class="f" style="margin-top:0">消費金額 (HKD)</label>
+        <div class="amount"><span>$</span><input class="inp num" id="txAmt" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0" required></div>
+        <div class="quick">
+          <button type="button" onclick="quick(45)">+45</button>
+          <button type="button" onclick="quick(65)">+65</button>
+          <button type="button" onclick="quick(100)">+100</button>
+          <button type="button" onclick="quick(500)">+500</button>
+          <button type="button" class="clr" onclick="quick(0)">清零</button>
+        </div>
+
+        <label class="f">預算池</label>
+        <div class="grid2" id="catGrid"></div>
+        <div id="customWrap" class="hidden">
+          <label class="f">自行輸入項目名稱</label>
+          <input class="inp" id="txCustom" type="text" placeholder="例：理髮、禮物、維修…" maxlength="30">
+        </div>
+
+        <label class="f">支付方式（自動歸入對應信用卡）</label>
+        <div class="grid2" id="payGrid"></div>
+
+        <div class="grid2" style="margin-top:2px">
+          <div><label class="f">日期</label><input class="inp" id="txDate" type="date" required></div>
+          <div><label class="f">備註（選填）</label><input class="inp" id="txNote" type="text" placeholder="例：午飯" maxlength="40"></div>
+        </div>
+        <button class="btn" type="submit">✓ 確認記帳</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ 明細 ============ -->
+  <section id="tab-list" class="tab">
+    <div class="card">
+      <h2><span class="l">🧾 本月消費明細</span><span class="chip" style="background:#f1f5f9;color:#475569" id="txCount">0 筆</span></h2>
+      <div class="filters">
+        <select id="fCat" onchange="renderList()"><option value="ALL">全部分類</option></select>
+        <select id="fPay" onchange="renderList()">
+          <option value="ALL">全部支付方式</option>
+          <option value="BOC_ALL">BOC 帳單（直刷+八達通）</option>
+          <option value="HSBC_ALL">HSBC 帳單（直刷+PayMe）</option>
+          <option value="BOC信用卡">BOC 直刷</option>
+          <option value="八達通">八達通</option>
+          <option value="HSBC信用卡">HSBC 直刷</option>
+          <option value="PayMe">PayMe</option>
+          <option value="現金">現金</option>
+        </select>
+      </div>
+      <div id="txList"></div>
+    </div>
+  </section>
+
+  <!-- ============ 投資 ============ -->
+  <section id="tab-inv" class="tab">
+    <div class="card">
+      <h2><span class="l">📈 本月投資</span><span class="sub num" id="invPlanTxt"></span></h2>
+      <div class="leg num" id="invLeg"></div>
+      <div class="bar" style="margin-top:12px"><i id="invBar" class="g" style="width:0"></i></div>
+      <div class="sub" style="margin-top:6px" id="invBarTxt"></div>
+    </div>
+
+    <div class="card">
+      <h2><span class="l">✍️ 記錄一筆投資</span></h2>
+      <form onsubmit="addInv(event)">
+        <label class="f" style="margin-top:0">投入金額</label>
+        <div class="amount"><span id="invSym">$</span><input class="inp num" id="invAmt" type="number" inputmode="decimal" step="0.01" min="0" placeholder="0" required oninput="invHint()"></div>
+
+        <label class="f">幣種</label>
+        <div class="toggle" id="curTg">
+          <button type="button" class="on" data-v="HKD" onclick="setInvCur('HKD')">港元 HKD</button>
+          <button type="button" data-v="USD" onclick="setInvCur('USD')">美元 USD</button>
+        </div>
+        <div id="fxWrap" class="hidden">
+          <label class="f">匯率（1 美元 = ? 港元）</label>
+          <input class="inp num" id="invFx" type="number" inputmode="decimal" step="0.0001" min="0" oninput="invHint()">
+        </div>
+        <div class="sub num" id="invConv" style="margin-top:6px"></div>
+
+        <label class="f">類別</label>
+        <div class="toggle" id="typeTg">
+          <button type="button" data-v="mmf" onclick="setInvType('mmf')">🏦 貨幣基金</button>
+          <button type="button" class="on" data-v="stock" onclick="setInvType('stock')">📊 股票（含 VOO）</button>
+        </div>
+
+        <div class="grid2">
+          <div><label class="f">標的（選填）</label><input class="inp" id="invTicker" type="text" placeholder="例：VOO" maxlength="20"></div>
+          <div><label class="f">日期</label><input class="inp" id="invDate" type="date" required></div>
+        </div>
+        <button class="btn" type="submit">✓ 記錄投資</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2><span class="l">🗂 投資記錄</span></h2>
+      <div id="invList"></div>
+    </div>
+  </section>
+</main>
+
+<nav><div class="in">
+  <button class="on" data-tab="home" onclick="goTab('home')"><span class="ic">🏠</span>總覽</button>
+  <button data-tab="add" onclick="goTab('add')"><span class="ic">➕</span>記帳</button>
+  <button data-tab="list" onclick="goTab('list')"><span class="ic">🧾</span>明細</button>
+  <button data-tab="inv" onclick="goTab('inv')"><span class="ic">📈</span>投資</button>
+</div></nav>
+
+<!-- 設定抽屜 -->
+<div class="back" id="cfgBack" onclick="if(event.target===this)closeSheet('cfgBack')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>本月收支與預算</h3>
+    <div class="sub">只影響所選月份；新月份會沿用最近一個月的設定。</div>
+
+    <div class="cfg-sec"><div class="hd">1. 本月實際收入 (HKD)</div>
+      <input class="inp num" id="cfgIncome" type="number" inputmode="decimal" oninput="cfgPreview()"></div>
+
+    <div class="cfg-sec"><div class="hd"><span>2. 固定支出 / 計劃投資</span><button class="add" onclick="addLockRow()">＋ 新增</button></div>
+      <div id="cfgLocked"></div></div>
+
+    <div class="cfg-sec"><div class="hd"><span>3. 日常預算池上限</span><button class="add" onclick="addCatRow()">＋ 新增</button></div>
+      <div id="cfgCats"></div></div>
+
+    <div class="preview num" id="cfgPrev"></div>
+
+    <button class="btn" onclick="saveConfig()">儲存設定</button>
+    <button class="btn ghost" onclick="resetDefault()">恢復預設範本</button>
+
+    <div class="cfg-sec"><div class="hd">資料備份</div>
+      <div class="tools">
+        <button onclick="openData('json')">備份</button>
+        <button onclick="openData('import')">還原</button>
+        <button onclick="openData('csv')">CSV</button>
+      </div>
+    </div>
+    <button class="btn ghost" onclick="closeSheet('cfgBack')">關閉</button>
+  </div>
+</div>
+
+<!-- 資料抽屜 -->
+<div class="back" id="dataBack" onclick="if(event.target===this)closeSheet('dataBack')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="dataTitle"></h3>
+    <div class="sub" id="dataDesc" style="margin-bottom:10px"></div>
+    <textarea class="inp" id="dataText" spellcheck="false"></textarea>
+    <button class="btn" id="dataGo"></button>
+    <button class="btn ghost" onclick="closeSheet('dataBack')">關閉</button>
+  </div>
+</div>
+
+<!-- 確認刪除 -->
+<div class="back" id="delBack" onclick="if(event.target===this)closeSheet('delBack')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3 id="delTitle">確定刪除？</h3>
+    <div class="sub" id="delDesc" style="margin-top:4px">刪除後金額會即時退回餘額。</div>
+    <button class="btn danger" id="delGo">確認刪除</button>
+    <button class="btn ghost" onclick="closeSheet('delBack')">取消</button>
+  </div>
+</div>
+
+<script>
+/* ================= 常數 ================= */
+var KEY = 'hk_budget_mobile_v2';
+// 支付方式：card 為「最終結算的信用卡」。八達通綁 BOC、PayMe 綁 HSBC，所以一筆消費只記一次。
+var PAY = [
+  {key:'BOC信用卡',  label:'BOC 信用卡', sub:'直刷',       card:'BOC',  em:'💳'},
+  {key:'八達通',     label:'八達通',     sub:'→ 計入 BOC',  card:'BOC',  em:'🚇'},
+  {key:'HSBC信用卡', label:'HSBC 信用卡',sub:'直刷',       card:'HSBC', em:'💳'},
+  {key:'PayMe',      label:'PayMe',      sub:'→ 計入 HSBC', card:'HSBC', em:'📱'},
+  {key:'現金',       label:'現金',       sub:'即時扣款',    card:null,   em:'💵'}
+];
+var PAY_ALIAS = {'Alipay/PayMe':'PayMe'}; // 舊資料相容
+function payOf(k){ k = PAY_ALIAS[k] || k; return PAY.find(function(p){return p.key===k}) || PAY[4]; }
+var TYPE_LABEL = {mmf:'貨幣基金', stock:'股票'};
+
+/* ================= 狀態 ================= */
+var app = {configs:{}, transactions:[], investments:[], fx:7.8};
+var cur = '', selCat = '', selPay = 'BOC信用卡', invCur = 'HKD', invType = 'stock';
+var dirty = {}, dbCol = null, flushing = false, syncState = 'local';
+
+function defaultConfig(){
+  return {
+    income: 32500,
+    lockedItems: [
+      {id:'l1', name:'房子按揭還款', amount:12500, type:'expense'},
+      {id:'l2', name:'計劃投資（VOO 等）', amount:7500, type:'savings'}
+    ],
+    categories: [
+      {id:'cat_lunch',    name:'午飯 + 八達通', limit:2000, icon:'🍱'},
+      {id:'cat_dating',   name:'約會與社交',    limit:800,  icon:'💕'},
+      {id:'cat_shopping', name:'網購與興趣',    limit:300,  icon:'🛍️'},
+      {id:'cat_utility',  name:'燃氣水電通訊',  limit:500,  icon:'💡'},
+      {id:'cat_custom',   name:'自訂項目',      limit:100,  icon:'✏️', custom:true}
+    ]
+  };
+}
+
+/* ================= 儲存（本機 + 雲端 db） ================= */
+function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(app)); }catch(e){} }
+function loadLocal(){
+  try{
+    var raw = localStorage.getItem(KEY); if(!raw) return false;
+    var p = JSON.parse(raw);
+    app.configs = p.configs||{}; app.transactions = p.transactions||[];
+    app.investments = p.investments||[]; app.fx = p.fx||7.8;
+    return Object.keys(app.configs).length>0 || app.transactions.length>0 || app.investments.length>0;
+  }catch(e){ return false; }
+}
+function mark(month){ if(month) dirty['m-'+month]=1; }
+function save(months){
+  saveLocal();
+  (months||[]).forEach(mark);
+  if(dbCol) flush();
+}
+function saveFx(){ dirty['meta']=1; save([]); }
+function setSync(s){
+  syncState = s;
+  var el = document.getElementById('syncTxt');
+  el.className = 'sync' + (s==='ok'?' ok':(s==='err'?' err':''));
+  el.textContent = s==='ok' ? '☁ 已同步（跨裝置）' : s==='saving' ? '同步中…' : s==='err' ? '⚠ 同步失敗，資料仍存在本機' : '本機儲存（資料只在此裝置）';
+}
+function monthBody(m){
+  return {
+    config: app.configs[m] || null,
+    tx: app.transactions.filter(function(t){return t.month===m}),
+    inv: app.investments.filter(function(t){return t.month===m})
+  };
+}
+async function flush(){
+  if(flushing || !dbCol) return;
+  flushing = true; setSync('saving');
+  try{
+    while(Object.keys(dirty).length){
+      var k = Object.keys(dirty)[0]; delete dirty[k];
+      var ref = dbCol.doc(k);
+      if(k==='meta'){ await ref.set({fx:app.fx}); continue; }
+      var b = monthBody(k.slice(2));
+      if(!b.config && !b.tx.length && !b.inv.length) await ref.delete();
+      else await ref.set(b);
+    }
+    setSync('ok');
+  }catch(e){ console.error(e); setSync('err'); }
+  flushing = false;
+}
+async function initRemote(){
+  try{
+    var db = await claude.use('db'), user = await claude.use('user');
+    if(!db || !user) return;
+    var id = await user.id(); if(!id) return;
+    var col = db.collection('data/users/'+id);
+    var snap = await col.get();
+    if(!snap.empty){
+      var cfgs={}, tx=[], inv=[], fx=app.fx;
+      snap.docs.forEach(function(d){
+        var data = d.data()||{};
+        if(d.id==='meta'){ if(data.fx) fx=data.fx; return; }
+        if(d.id.indexOf('m-')!==0) return;
+        var m = d.id.slice(2);
+        if(data.config) cfgs[m]=data.config;
+        (data.tx||[]).forEach(function(t){tx.push(t)});
+        (data.inv||[]).forEach(function(t){inv.push(t)});
+      });
+      app.configs=cfgs; app.transactions=tx; app.investments=inv; app.fx=fx;
+      saveLocal();
+      dbCol = col; setSync('ok'); refresh();
+    }else{
+      dbCol = col;
+      // 雲端是空的：把本機資料全部上傳
+      Object.keys(app.configs).forEach(mark);
+      app.transactions.forEach(function(t){mark(t.month)});
+      app.investments.forEach(function(t){mark(t.month)});
+      dirty['meta']=1;
+      await flush();
+    }
+  }catch(e){ console.error(e); setSync('local'); }
+}
+
+function getCfg(m){
+  if(!app.configs[m]){
+    var ks = Object.keys(app.configs).sort(), prior = null;
+    ks.forEach(function(k){ if(k<=m) prior = k; });
+    if(!prior && ks.length) prior = ks[ks.length-1];
+    app.configs[m] = prior ? JSON.parse(JSON.stringify(app.configs[prior])) : defaultConfig();
+    saveLocal();
+  }
+  return app.configs[m];
+}
+
+/* ================= 工具 ================= */
+function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function money(n){ n=Number(n)||0; return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US'); }
+function money2(n){ n=Number(n)||0; return '$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}); }
+function sum(a,f){ return a.reduce(function(s,x){return s+(Number(f(x))||0)},0); }
+function toast(msg,err){
+  var c=document.getElementById('toast'), t=document.createElement('div');
+  t.className='toast'+(err?' err':''); t.textContent=msg; c.appendChild(t);
+  setTimeout(function(){t.remove()},2600);
+}
+function openSheet(id){ document.getElementById(id).classList.add('on'); }
+function closeSheet(id){ document.getElementById(id).classList.remove('on'); }
+function goTab(t){
+  document.querySelectorAll('.tab').forEach(function(s){s.classList.toggle('on', s.id==='tab-'+t)});
+  document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on', b.dataset.tab===t)});
+  window.scrollTo(0,0);
+}
+function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function uid(p){ return p+Date.now()+'_'+Math.random().toString(36).slice(2,6); }
+
+/* ================= 計算核心 ================= */
+function calc(){
+  var cfg = getCfg(cur);
+  var txs = app.transactions.filter(function(t){return t.month===cur});
+  var invs = app.investments.filter(function(t){return t.month===cur});
+  var fixed = sum(cfg.lockedItems.filter(function(i){return i.type!=='savings'}), function(i){return i.amount});
+  var plan  = sum(cfg.lockedItems.filter(function(i){return i.type==='savings'}), function(i){return i.amount});
+  var budget = sum(cfg.categories, function(c){return c.limit});
+  var spent = sum(txs, function(t){return t.amount});
+  var income = Number(cfg.income)||0;
+  var savings = income - fixed - spent;
+  var by = {BOC:{total:0,'BOC信用卡':0,'八達通':0}, HSBC:{total:0,'HSBC信用卡':0,'PayMe':0}, cash:0};
+  txs.forEach(function(t){
+    var p = payOf(t.paymentMethod), a = Number(t.amount)||0;
+    if(p.card==='BOC'){ by.BOC.total+=a; by.BOC[p.key]+=a; }
+    else if(p.card==='HSBC'){ by.HSBC.total+=a; by.HSBC[p.key]+=a; }
+    else by.cash+=a;
+  });
+  var invMmf = sum(invs.filter(function(i){return i.assetType==='mmf'}), function(i){return i.amountHKD});
+  var invStock = sum(invs.filter(function(i){return i.assetType!=='mmf'}), function(i){return i.amountHKD});
+  var invTotal = invMmf + invStock;
+  return {cfg:cfg, txs:txs, invs:invs, fixed:fixed, plan:plan, budget:budget, spent:spent, income:income,
+          savings:savings, rate: income>0? savings/income*100 : 0, by:by,
+          invMmf:invMmf, invStock:invStock, invTotal:invTotal, cash: savings - invTotal};
+}
+
+/* ================= 渲染 ================= */
+function refresh(){
+  var c = calc();
+  renderHome(c); renderAddForm(c.cfg); renderFilters(c.cfg); renderList(); renderInv(c);
+}
+function $(id){ return document.getElementById(id); }
+
+function renderHome(c){
+  var rem = c.budget - c.spent;
+  $('remain').textContent = money(rem);
+  $('remain').style.color = rem<0 ? '#fb7185' : (rem < c.budget*0.2 ? '#fcd34d' : '#fff');
+  $('totBudget').textContent = money(c.budget);
+  $('spentTxt').textContent = money(c.spent);
+  var raw = c.budget>0 ? Math.round(c.spent/c.budget*100) : 0;
+  $('spentPct').textContent = raw+'%';
+  var bar = $('spentBar'); bar.style.width = Math.min(100,raw)+'%';
+  bar.className = raw>=100?'r':(raw>=75?'a':'g');
+  var rb = $('rateBadge');
+  rb.className = 'rate num '+(c.rate>=50?'ok':'bad');
+  rb.textContent = (c.rate>=50?'✓ 儲蓄率 ':'⚠ 儲蓄率 ')+c.rate.toFixed(1)+'%';
+  $('stIncome').textContent = money(c.income);
+  $('stFixed').textContent = money(c.fixed);
+  $('stPlan').textContent = money(c.plan);
+
+  $('reserveTotal').textContent = money(c.by.BOC.total + c.by.HSBC.total);
+  $('bocTot').textContent = money(c.by.BOC.total);
+  $('bocSub').textContent = '直刷 '+money(c.by.BOC['BOC信用卡'])+' · 八達通 '+money(c.by.BOC['八達通']);
+  $('hsbcTot').textContent = money(c.by.HSBC.total);
+  $('hsbcSub').textContent = '直刷 '+money(c.by.HSBC['HSBC信用卡'])+' · PayMe '+money(c.by.HSBC['PayMe']);
+  $('cashTot').textContent = money(c.by.cash);
+
+  // 儲蓄去向
+  $('saveTotTxt').textContent = '共 '+money(c.savings);
+  var base = Math.max(c.savings, c.invTotal, 1);
+  var cashPos = Math.max(0, c.cash);
+  var tot = c.invMmf + c.invStock + cashPos || 1;
+  $('saveSeg').innerHTML =
+    '<i style="width:'+(c.invStock/tot*100)+'%;background:#6366f1"></i>'+
+    '<i style="width:'+(c.invMmf/tot*100)+'%;background:#0ea5e9"></i>'+
+    '<i style="width:'+(cashPos/tot*100)+'%;background:#10b981"></i>';
+  $('saveLeg').innerHTML =
+    '<div><span class="dot" style="background:#6366f1"></span>股票 / VOO<b>'+money(c.invStock)+'</b></div>'+
+    '<div><span class="dot" style="background:#0ea5e9"></span>貨幣基金<b>'+money(c.invMmf)+'</b></div>'+
+    '<div><span class="dot" style="background:#10b981"></span>現金（自動）<b style="color:'+(c.cash<0?'#e11d48':'inherit')+'">'+money(c.cash)+'</b></div>'+
+    '<div><span class="dot" style="background:#94a3b8"></span>儲蓄合計<b>'+money(c.savings)+'</b></div>';
+
+  // 預算池
+  var box = $('pools'); box.innerHTML='';
+  c.cfg.categories.forEach(function(cat){
+    var sp = sum(c.txs.filter(function(t){return t.categoryId===cat.id}), function(t){return t.amount});
+    var lim = Number(cat.limit)||0, left = lim-sp;
+    var pct = lim>0 ? sp/lim*100 : (sp>0?100:0);
+    var col = pct>=100?'r':(pct>=75?'a':'g');
+    var d = document.createElement('div'); d.className='card pool';
+    d.innerHTML =
+      '<div class="top"><div class="nm"><span class="em">'+esc(cat.icon||'🏷️')+'</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(cat.name)+'</span></div>'+
+      '<span class="chip '+col+' num">'+(left<0?'超支 '+money(-left):'剩 '+money(left))+'</span></div>'+
+      '<div class="amt num"><b>'+money(sp)+'</b><span>/ 上限 '+money(lim)+'</span></div>'+
+      '<div class="bar"><i class="'+col+'" style="width:'+Math.min(100,Math.max(0,pct))+'%"></i></div>';
+    box.appendChild(d);
+  });
+
+  // 固定項目
+  $('locked').innerHTML = c.cfg.lockedItems.map(function(i){
+    var sv = i.type==='savings';
+    return '<div class="row"><div><div class="t">'+(sv?'🐖 ':'🏠 ')+esc(i.name)+'</div><div class="s">'+(sv?'計劃儲蓄／投資':'固定剛性支出')+'</div></div><div class="a num">'+money(i.amount)+'</div></div>';
+  }).join('') || '<div class="sub">尚未設定</div>';
+}
+
+function renderAddForm(cfg){
+  if(!cfg.categories.some(function(c){return c.id===selCat}) && cfg.categories.length) selCat = cfg.categories[0].id;
+  var g = $('catGrid'); g.innerHTML='';
+  cfg.categories.forEach(function(cat){
+    var b = document.createElement('button'); b.type='button';
+    b.className = 'opt'+(cat.id===selCat?' sel':'');
+    b.innerHTML = '<span class="em">'+esc(cat.icon||'🏷️')+'</span><span>'+esc(cat.name)+(cat.custom?'<small>自行輸入</small>':'')+'</span>';
+    b.onclick = function(){ selCat = cat.id; renderAddForm(cfg); };
+    g.appendChild(b);
+  });
+  var sc = cfg.categories.find(function(c){return c.id===selCat});
+  $('customWrap').classList.toggle('hidden', !(sc && sc.custom));
+  var p = $('payGrid'); p.innerHTML='';
+  PAY.forEach(function(m){
+    var b = document.createElement('button'); b.type='button';
+    b.className = 'opt pay'+(m.key===selPay?' sel':'');
+    b.innerHTML = '<span class="em">'+m.em+'</span><span>'+m.label+'<small>'+m.sub+'</small></span>';
+    b.onclick = function(){ selPay = m.key; renderAddForm(cfg); };
+    p.appendChild(b);
+  });
+}
+
+function renderFilters(cfg){
+  var s = $('fCat'), v = s.value;
+  s.innerHTML = '<option value="ALL">全部分類</option>' + cfg.categories.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.name)+'</option>'}).join('');
+  if(Array.prototype.some.call(s.options,function(o){return o.value===v})) s.value = v;
+}
+
+function renderList(){
+  var cfg = getCfg(cur), cf = $('fCat').value, pf = $('fPay').value;
+  var list = app.transactions.filter(function(t){return t.month===cur});
+  if(cf!=='ALL') list = list.filter(function(t){return t.categoryId===cf});
+  if(pf==='BOC_ALL') list = list.filter(function(t){return payOf(t.paymentMethod).card==='BOC'});
+  else if(pf==='HSBC_ALL') list = list.filter(function(t){return payOf(t.paymentMethod).card==='HSBC'});
+  else if(pf!=='ALL') list = list.filter(function(t){return payOf(t.paymentMethod).key===pf});
+  list.sort(function(a,b){return b.date.localeCompare(a.date) || String(b.id).localeCompare(String(a.id))});
+  $('txCount').textContent = list.length+' 筆';
+  var box = $('txList');
+  if(!list.length){ box.innerHTML='<div class="empty">本月暫無符合條件的消費紀錄</div>'; return; }
+  var cm = {}; cfg.categories.forEach(function(c){cm[c.id]=c});
+  box.innerHTML = list.map(function(t){
+    var cat = cm[t.categoryId] || {name:'其他分類', icon:'🏷️'}, p = payOf(t.paymentMethod);
+    var title = t.customLabel ? (cat.name+'・'+t.customLabel) : cat.name;
+    return '<div class="tx"><div class="em">'+esc(cat.icon||'🏷️')+'</div><div class="mid">'+
+      '<div class="t">'+esc(title)+'<span class="badge '+(p.card?'c':'o')+'">'+esc(p.label)+'</span></div>'+
+      '<div class="s num">'+esc(t.date)+(t.note?' · '+esc(t.note):'')+'</div></div>'+
+      '<div class="amt num">-'+money2(t.amount)+'</div>'+
+      '<button class="del" aria-label="刪除" onclick="askDelTx(\''+esc(t.id)+'\')">🗑</button></div>';
+  }).join('');
+}
+
+function renderInv(c){
+  var invs = c.invs.slice().sort(function(a,b){return b.date.localeCompare(a.date)});
+  $('invLeg').innerHTML =
+    '<div><span class="dot" style="background:#6366f1"></span>股票 / VOO<b>'+money(c.invStock)+'</b></div>'+
+    '<div><span class="dot" style="background:#0ea5e9"></span>貨幣基金<b>'+money(c.invMmf)+'</b></div>'+
+    '<div><span class="dot" style="background:#10b981"></span>剩餘 → 現金<b style="color:'+(c.cash<0?'#e11d48':'inherit')+'">'+money(c.cash)+'</b></div>'+
+    '<div><span class="dot" style="background:#94a3b8"></span>已投入合計<b>'+money(c.invTotal)+'</b></div>';
+  $('invPlanTxt').textContent = c.plan>0 ? '計劃 '+money(c.plan) : '';
+  var pct = c.plan>0 ? c.invTotal/c.plan*100 : 0;
+  $('invBar').style.width = Math.min(100,pct)+'%';
+  $('invBar').className = pct>=100?'g':'a';
+  $('invBarTxt').textContent = c.plan>0 ? ('已完成計劃投資 '+Math.round(pct)+'%') : '尚未設定計劃投資（可在設定中新增「儲蓄/投資」項目）';
+  if(c.cash<0) $('invBarTxt').textContent += '　⚠ 投入已超過本月儲蓄';
+  var box = $('invList');
+  if(!invs.length){ box.innerHTML='<div class="empty">本月尚未記錄投資</div>'; return; }
+  box.innerHTML = invs.map(function(i){
+    var usd = i.currency==='USD';
+    return '<div class="tx"><div class="em">'+(i.assetType==='mmf'?'🏦':'📊')+'</div><div class="mid">'+
+      '<div class="t">'+esc(i.ticker || TYPE_LABEL[i.assetType]||'')+'<span class="badge o">'+esc(TYPE_LABEL[i.assetType]||'')+'</span></div>'+
+      '<div class="s num">'+esc(i.date)+(usd?' · US$'+money2(i.amount).slice(1)+' @ '+i.fx:'')+'</div></div>'+
+      '<div class="amt num">'+money(i.amountHKD)+'</div>'+
+      '<button class="del" aria-label="刪除" onclick="askDelInv(\''+esc(i.id)+'\')">🗑</button></div>';
+  }).join('');
+}
+
+/* ================= 記帳 ================= */
+function quick(v){
+  var el = $('txAmt');
+  if(v===0){ el.value=''; el.focus(); return; }
+  el.value = ((parseFloat(el.value)||0)+v).toString();
+}
+function addTx(e){
+  e.preventDefault();
+  var amount = parseFloat($('txAmt').value);
+  if(!(amount>0)){ toast('請輸入大於 0 的金額',1); return; }
+  var cfg = getCfg(cur), cat = cfg.categories.find(function(c){return c.id===selCat});
+  var label = $('txCustom').value.trim();
+  if(cat && cat.custom && !label){ toast('請輸入自訂項目名稱',1); $('txCustom').focus(); return; }
+  var date = $('txDate').value || today();
+  var tx = {id:uid('tx_'), month:date.slice(0,7), date:date, amount:amount, categoryId:selCat,
+            paymentMethod:selPay, note:$('txNote').value.trim()};
+  if(cat && cat.custom) tx.customLabel = label;
+  app.transactions.push(tx);
+  save([tx.month]);
+  $('txAmt').value=''; $('txNote').value=''; $('txCustom').value='';
+  setMonth(tx.month);
+  var p = payOf(selPay);
+  toast('已記 '+money2(amount)+(p.card?'（計入 '+p.card+' 卡數）':'（現金已扣）'));
+}
+function askDelTx(id){
+  $('delTitle').textContent='確定刪除此筆消費？';
+  $('delDesc').textContent='刪除後金額會即時退回預算池與可動用餘額。';
+  $('delGo').onclick = function(){
+    var t = app.transactions.find(function(x){return x.id===id});
+    app.transactions = app.transactions.filter(function(x){return x.id!==id});
+    save(t?[t.month]:[]); closeSheet('delBack'); refresh(); toast('已刪除');
+  };
+  openSheet('delBack');
+}
+
+/* ================= 投資 ================= */
+function setInvCur(v){
+  invCur = v;
+  document.querySelectorAll('#curTg button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
+  $('fxWrap').classList.toggle('hidden', v!=='USD');
+  $('invSym').textContent = v==='USD' ? 'US$' : '$';
+  $('invAmt').style.paddingLeft = v==='USD' ? '64px' : '40px';
+  invHint();
+}
+function setInvType(v){
+  invType = v;
+  document.querySelectorAll('#typeTg button').forEach(function(b){b.classList.toggle('on',b.dataset.v===v)});
+}
+function invHint(){
+  var a = parseFloat($('invAmt').value)||0, fx = parseFloat($('invFx').value)||app.fx;
+  $('invConv').textContent = (invCur==='USD' && a>0) ? ('≈ HK$'+(a*fx).toLocaleString('en-US',{maximumFractionDigits:0})+'（按匯率 '+fx+'）') : '';
+}
+function addInv(e){
+  e.preventDefault();
+  var amount = parseFloat($('invAmt').value);
+  if(!(amount>0)){ toast('請輸入投入金額',1); return; }
+  var fx = 1;
+  if(invCur==='USD'){
+    fx = parseFloat($('invFx').value);
+    if(!(fx>0)){ toast('請輸入匯率',1); return; }
+    if(fx!==app.fx){ app.fx = fx; saveFx(); }
+  }
+  var date = $('invDate').value || today();
+  var rec = {id:uid('inv_'), month:date.slice(0,7), date:date, amount:amount, currency:invCur, fx:fx,
+             amountHKD: Math.round(amount*fx*100)/100, assetType:invType, ticker:$('invTicker').value.trim().toUpperCase()};
+  app.investments.push(rec);
+  save([rec.month]);
+  $('invAmt').value=''; $('invTicker').value=''; invHint();
+  setMonth(rec.month);
+  toast('已記錄投資 '+money(rec.amountHKD)+'，剩餘自動歸入現金');
+}
+function askDelInv(id){
+  $('delTitle').textContent='確定刪除此筆投資記錄？';
+  $('delDesc').textContent='刪除後該金額會重新歸入現金。';
+  $('delGo').onclick = function(){
+    var t = app.investments.find(function(x){return x.id===id});
+    app.investments = app.investments.filter(function(x){return x.id!==id});
+    save(t?[t.month]:[]); closeSheet('delBack'); refresh(); toast('已刪除');
+  };
+  openSheet('delBack');
+}
+
+/* ================= 設定 ================= */
+function openConfig(){
+  var cfg = getCfg(cur);
+  $('cfgIncome').value = cfg.income;
+  $('cfgLocked').innerHTML=''; cfg.lockedItems.forEach(function(i){ lockRow(i.name,i.amount,i.type); });
+  $('cfgCats').innerHTML=''; cfg.categories.forEach(function(c){ catRow(c); });
+  cfgPreview(); openSheet('cfgBack');
+}
+function lockRow(name,amount,type){
+  var d = document.createElement('div'); d.className='crow lrow';
+  d.innerHTML =
+    '<input class="inp" type="text" placeholder="項目名稱" value="'+esc(name)+'" oninput="cfgPreview()">'+
+    '<div class="r2"><select class="inp" style="flex:1" onchange="cfgPreview()">'+
+      '<option value="expense"'+(type==='expense'?' selected':'')+'>固定支出</option>'+
+      '<option value="savings"'+(type==='savings'?' selected':'')+'>儲蓄/投資</option></select>'+
+    '<input class="inp num" style="width:110px" type="number" inputmode="decimal" placeholder="金額" value="'+esc(amount)+'" oninput="cfgPreview()">'+
+    '<button class="x" type="button" onclick="this.closest(\'.crow\').remove();cfgPreview()">🗑</button></div>';
+  $('cfgLocked').appendChild(d);
+}
+function addLockRow(){ lockRow('',0,'expense'); cfgPreview(); }
+function catRow(c){
+  c = c || {};
+  var d = document.createElement('div'); d.className='crow crowc';
+  d.dataset.id = c.id || uid('cat_'); d.dataset.icon = c.icon || '🏷️';
+  d.innerHTML =
+    '<input class="inp" type="text" placeholder="類別名稱" value="'+esc(c.name||'')+'" oninput="cfgPreview()">'+
+    '<div class="r2"><input class="inp num" style="flex:1" type="number" inputmode="decimal" placeholder="預算上限" value="'+esc(c.limit==null?300:c.limit)+'" oninput="cfgPreview()">'+
+    '<label class="chk"><input type="checkbox" '+(c.custom?'checked':'')+'>記帳時自填名稱</label>'+
+    '<button class="x" type="button" onclick="this.closest(\'.crow\').remove();cfgPreview()">🗑</button></div>';
+  $('cfgCats').appendChild(d);
+}
+function addCatRow(){ catRow({limit:300}); cfgPreview(); }
+function readCfg(){
+  var lockedItems=[], categories=[];
+  document.querySelectorAll('.lrow').forEach(function(r,i){
+    var name = r.querySelector('input[type=text]').value.trim();
+    if(!name) return;
+    lockedItems.push({id:'l'+i+'_'+Date.now(), name:name, type:r.querySelector('select').value,
+                      amount:parseFloat(r.querySelector('input[type=number]').value)||0});
+  });
+  document.querySelectorAll('.crowc').forEach(function(r){
+    var name = r.querySelector('input[type=text]').value.trim();
+    if(!name) return;
+    var o = {id:r.dataset.id, name:name, icon:r.dataset.icon,
+             limit:parseFloat(r.querySelector('input[type=number]').value)||0};
+    if(r.querySelector('input[type=checkbox]').checked) o.custom = true;
+    categories.push(o);
+  });
+  return {income:parseFloat($('cfgIncome').value)||0, lockedItems:lockedItems, categories:categories};
+}
+function cfgPreview(){
+  var c = readCfg();
+  var fixed = sum(c.lockedItems.filter(function(i){return i.type!=='savings'}),function(i){return i.amount});
+  var plan = sum(c.lockedItems.filter(function(i){return i.type==='savings'}),function(i){return i.amount});
+  var lim = sum(c.categories,function(i){return i.limit});
+  var sv = c.income - fixed - lim, rate = c.income>0 ? sv/c.income*100 : 0;
+  $('cfgPrev').innerHTML =
+    '<div class="rw"><span>日常預算合計</span><b>'+money(lim)+'</b></div>'+
+    '<div class="rw"><span>預算花滿時儲蓄率</span><b style="color:'+(rate>=50?'#059669':'#e11d48')+'">'+rate.toFixed(1)+'%（'+money(sv)+'）</b></div>'+
+    '<div class="rw"><span>其中計劃投資</span><b>'+money(plan)+'</b></div>'+
+    '<div class="rw"><span>預計自動歸現金</span><b>'+money(sv-plan)+'</b></div>';
+}
+function saveConfig(){
+  var c = readCfg();
+  if(!c.categories.length){ toast('請至少保留一個預算池',1); return; }
+  app.configs[cur] = c; save([cur]); closeSheet('cfgBack'); refresh(); toast('已更新本月設定');
+}
+function resetDefault(){
+  app.configs[cur] = defaultConfig(); save([cur]); openConfig(); refresh(); toast('已恢復預設範本');
+}
+
+/* ================= 備份 / 還原 / CSV（複製貼上，適合 iPhone） ================= */
+function copyText(txt){
+  var ta = $('dataText');
+  return (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){
+    toast('已複製到剪貼簿');
+  }).catch(function(){
+    ta.focus(); ta.select(); ta.setSelectionRange(0, txt.length);
+    var ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+    toast(ok?'已複製到剪貼簿':'請長按文字手動全選並拷貝', !ok);
+  });
+}
+function openData(mode){
+  var ta=$('dataText'), go=$('dataGo');
+  if(mode==='import'){
+    $('dataTitle').textContent='還原備份';
+    $('dataDesc').textContent='貼上先前複製的備份文字，按下「還原」會覆蓋目前所有資料。';
+    ta.value=''; ta.placeholder='在此貼上 JSON 備份文字…'; go.textContent='還原資料';
+    go.onclick=function(){
+      try{
+        var p = JSON.parse(ta.value), d = p.data||p;
+        if(!d || !d.configs || !Array.isArray(d.transactions)) throw 0;
+        app = {configs:d.configs, transactions:d.transactions, investments:d.investments||[], fx:d.fx||7.8};
+        saveLocal();
+        Object.keys(app.configs).forEach(mark);
+        app.transactions.forEach(function(t){mark(t.month)});
+        app.investments.forEach(function(t){mark(t.month)});
+        dirty['meta']=1;
+        if(dbCol) flush();
+        closeSheet('dataBack'); closeSheet('cfgBack'); refresh(); toast('還原成功');
+      }catch(e){ toast('格式不正確，無法還原',1); }
+    };
+  }else if(mode==='json'){
+    $('dataTitle').textContent='備份資料';
+    $('dataDesc').textContent='按「複製」後貼到備忘錄或雲端保存。';
+    ta.value = JSON.stringify({app:'智控預算帳本', exportedAt:new Date().toISOString(), data:app}, null, 1);
+    go.textContent='複製備份'; go.onclick=function(){ copyText(ta.value); };
+  }else{
+    var cfg=getCfg(cur), cm={}; cfg.categories.forEach(function(c){cm[c.id]=c.name});
+    var csv='日期,分類,自訂名稱,支付方式,結算信用卡,金額(HKD),備註\n';
+    app.transactions.filter(function(t){return t.month===cur}).sort(function(a,b){return a.date.localeCompare(b.date)}).forEach(function(t){
+      var p=payOf(t.paymentMethod);
+      csv += [t.date, cm[t.categoryId]||'其他', t.customLabel||'', p.label, p.card||'-', t.amount, (t.note||'')].map(function(x){return String(x).replace(/[,\n]/g,' ')}).join(',')+'\n';
+    });
+    $('dataTitle').textContent='本月明細 CSV';
+    $('dataDesc').textContent='複製後可貼到 Numbers / Excel。';
+    ta.value=csv; go.textContent='複製 CSV'; go.onclick=function(){ copyText(ta.value); };
+  }
+  openSheet('dataBack');
+}
+
+/* ================= 月份 / 啟動 ================= */
+function setMonth(m){ cur=m; $('monthSel').value=m; refresh(); }
+window.addEventListener('load', function(){
+  loadLocal();
+  var t = today();
+  cur = t.slice(0,7);
+  $('monthSel').value = cur;
+  $('txDate').value = t; $('invDate').value = t; $('invFx').value = app.fx;
+  $('monthSel').addEventListener('change', function(e){
+    if(e.target.value){ cur = e.target.value; refresh(); }
+  });
+  $('txDate').addEventListener('change', function(e){
+    if(e.target.value && e.target.value.slice(0,7)!==cur) setMonth(e.target.value.slice(0,7));
+  });
+  refresh();
+});
+</script>
+</body>
+</html>
