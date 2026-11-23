@@ -112,6 +112,7 @@ label.f{display:block;font-size:12px;font-weight:700;color:#475569;margin:14px 0
 .tx .t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tx .s{font-size:12px;color:var(--mute);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tx .amt{font-weight:800;font-size:15px;text-align:right}
+.tx{cursor:pointer}
 .tx .del{width:40px;height:40px;border-radius:12px;color:#94a3b8;font-size:16px}
 .tx .del:active{background:var(--red-l);color:var(--red)}
 .badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:7px;margin-left:6px;vertical-align:1px}
@@ -183,7 +184,7 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
       <div class="stats num">
         <div class="stat"><div class="k">本月收入</div><div class="v" id="stIncome">$0</div></div>
         <div class="stat"><div class="k">固定支出</div><div class="v" id="stFixed" style="color:#fcd34d">$0</div></div>
-        <div class="stat"><div class="k">計劃投資</div><div class="v" id="stPlan" style="color:#34d399">$0</div></div>
+        <div class="stat"><div class="k">預留儲蓄</div><div class="v" id="stPlan" style="color:#34d399">$0</div></div>
       </div>
     </div>
 
@@ -215,7 +216,14 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
       <h2><span class="l">🎯 本月儲蓄去向</span><span class="sub num" id="saveTotTxt"></span></h2>
       <div class="seg" id="saveSeg"></div>
       <div class="leg num" id="saveLeg"></div>
-      <div class="hint">儲蓄 = 收入 − 固定支出 − 已花日常。在「投資」頁記錄的金額會歸入貨幣基金／股票，<b>其餘自動算作現金</b>。</div>
+      <div class="hint">儲蓄 = 收入 − 固定支出 − 已花日常。MPF 為鎖定儲蓄；在「投資」頁記錄的金額歸入貨幣基金／股票，<b>其餘自動算作現金</b>。</div>
+    </div>
+
+    <div class="card">
+      <h2><span class="l">🏦 累計資產</span><span class="sub num" id="assetSub"></span></h2>
+      <div class="reserve" style="background:#ecfdf5"><div class="k" style="color:#065f46">累計總額（至所選月份）</div><div class="v num" id="assetTotal" style="color:#047857">$0</div></div>
+      <div class="leg num" id="assetLeg"></div>
+      <div class="hint">累計 = 起點 + 各月結餘，現金會自動滾存到下個月。只計算有記帳的月份；股票和貨幣基金為累計投入，不含盈虧。起點可在設定裡填。</div>
     </div>
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px">
@@ -349,11 +357,20 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
     <div class="cfg-sec"><div class="hd">1. 本月實際收入 (HKD)</div>
       <input class="inp num" id="cfgIncome" type="number" inputmode="decimal" oninput="cfgPreview()"></div>
 
-    <div class="cfg-sec"><div class="hd"><span>2. 固定支出 / 計劃投資</span><button class="add" onclick="addLockRow()">＋ 新增</button></div>
+    <div class="cfg-sec"><div class="hd"><span>2. 固定支出 / MPF / 計劃投資</span><button class="add" onclick="addLockRow()">＋ 新增</button></div>
       <div id="cfgLocked"></div></div>
 
     <div class="cfg-sec"><div class="hd"><span>3. 日常預算池上限</span><button class="add" onclick="addCatRow()">＋ 新增</button></div>
       <div id="cfgCats"></div></div>
+
+    <div class="cfg-sec"><div class="hd">4. 累計起點（開始記帳前已有的資產）</div>
+      <div class="grid2">
+        <div><div class="sub">現金</div><input class="inp num" id="opCash" type="number" inputmode="decimal"></div>
+        <div><div class="sub">MPF 鎖定</div><input class="inp num" id="opMpf" type="number" inputmode="decimal"></div>
+        <div style="margin-top:8px"><div class="sub">貨幣基金（投入）</div><input class="inp num" id="opMmf" type="number" inputmode="decimal"></div>
+        <div style="margin-top:8px"><div class="sub">股票（投入）</div><input class="inp num" id="opStock" type="number" inputmode="decimal"></div>
+      </div>
+    </div>
 
     <div class="preview num" id="cfgPrev"></div>
 
@@ -383,6 +400,22 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
   </div>
 </div>
 
+<!-- 編輯消費 -->
+<div class="back" id="editBack" onclick="if(event.target===this)closeSheet('editBack')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>編輯消費</h3>
+    <label class="f">金額 (HKD)</label><input class="inp num" id="eAmt" type="number" inputmode="decimal" step="0.1">
+    <label class="f">預算池</label><select class="inp" id="eCat" onchange="eCatChange()"></select>
+    <div id="eCustWrap" class="hidden"><label class="f">自行輸入項目名稱</label><input class="inp" id="eCust" type="text" maxlength="30"></div>
+    <label class="f">支付方式</label><select class="inp" id="ePay"></select>
+    <div class="grid2"><div><label class="f">日期</label><input class="inp" id="eDate" type="date"></div>
+    <div><label class="f">備註</label><input class="inp" id="eNote" type="text" maxlength="40"></div></div>
+    <button class="btn" onclick="saveEdit()">儲存修改</button>
+    <button class="btn ghost" onclick="closeSheet('editBack')">取消</button>
+  </div>
+</div>
+
 <!-- 確認刪除 -->
 <div class="back" id="delBack" onclick="if(event.target===this)closeSheet('delBack')">
   <div class="sheet">
@@ -396,8 +429,8 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
 
 <script>
 /* ================= 常數 ================= */
-var KEY = 'hk_budget_mobile_v2';
-// 支付方式：card 為「最終結算的信用卡」。八達通綁 BOC、PayMe 綁 HSBC，所以一筆消費只記一次。
+var KEY = 'hk_budget_mobile_v2';   // 沿用同一個 key，舊資料會保留
+var VER = 3;
 var PAY = [
   {key:'BOC信用卡',  label:'BOC 信用卡', sub:'直刷',       card:'BOC',  em:'💳'},
   {key:'八達通',     label:'八達通',     sub:'→ 計入 BOC',  card:'BOC',  em:'🚇'},
@@ -405,120 +438,73 @@ var PAY = [
   {key:'PayMe',      label:'PayMe',      sub:'→ 計入 HSBC', card:'HSBC', em:'📱'},
   {key:'現金',       label:'現金',       sub:'即時扣款',    card:null,   em:'💵'}
 ];
-var PAY_ALIAS = {'Alipay/PayMe':'PayMe'}; // 舊資料相容
+var PAY_ALIAS = {'Alipay/PayMe':'PayMe'};
 function payOf(k){ k = PAY_ALIAS[k] || k; return PAY.find(function(p){return p.key===k}) || PAY[4]; }
 var TYPE_LABEL = {mmf:'貨幣基金', stock:'股票'};
 
 /* ================= 狀態 ================= */
-var app = {configs:{}, transactions:[], investments:[], fx:7.8};
-var cur = '', selCat = '', selPay = 'BOC信用卡', invCur = 'HKD', invType = 'stock';
-var dirty = {}, dbCol = null, flushing = false, syncState = 'local';
+var app = {configs:{}, transactions:[], investments:[], fx:7.8, opening:{cash:0,mpf:0,mmf:0,stock:0}, ver:VER};
+var cur = '', selCat = '', selPay = 'BOC信用卡', invCur = 'HKD', invType = 'stock', editId = null;
 
 function defaultConfig(){
   return {
     income: 32500,
     lockedItems: [
-      {id:'l1', name:'房子按揭還款', amount:12500, type:'expense'},
-      {id:'l2', name:'計劃投資（VOO 等）', amount:7500, type:'savings'}
+      {id:'l1', name:'房子按揭還款',            amount:12500, type:'expense'},
+      {id:'l2', name:'通勤交通（上下班，免記帳）', amount:500,   type:'expense'},
+      {id:'l3', name:'MPF 自願供款（可扣稅）',   amount:2000,  type:'locked'},
+      {id:'l4', name:'計劃投資（VOO 等）',       amount:7500,  type:'savings'}
     ],
     categories: [
-      {id:'cat_lunch',    name:'午飯 + 八達通', limit:2000, icon:'🍱'},
-      {id:'cat_dating',   name:'約會與社交',    limit:800,  icon:'💕'},
-      {id:'cat_shopping', name:'網購與興趣',    limit:300,  icon:'🛍️'},
-      {id:'cat_utility',  name:'燃氣水電通訊',  limit:500,  icon:'💡'},
-      {id:'cat_custom',   name:'自訂項目',      limit:100,  icon:'✏️', custom:true}
+      {id:'cat_lunch',    name:'餐食',         limit:1500, icon:'🍱'},
+      {id:'cat_dating',   name:'約會與社交',   limit:800,  icon:'💕'},
+      {id:'cat_shopping', name:'網購與興趣',   limit:300,  icon:'🛍️'},
+      {id:'cat_utility',  name:'燃氣水電通訊', limit:500,  icon:'💡'},
+      {id:'cat_custom',   name:'自訂項目',     limit:100,  icon:'✏️', custom:true}
     ]
   };
 }
 
-/* ================= 儲存（本機 + 雲端 db） ================= */
-function saveLocal(){ try{ localStorage.setItem(KEY, JSON.stringify(app)); }catch(e){} }
+/* ================= 本機儲存 + 舊資料升級 ================= */
+function saveLocal(){
+  try{ localStorage.setItem(KEY, JSON.stringify(app)); }
+  catch(e){ toast('瀏覽器儲存失敗，請盡快做備份', 1); }
+}
+function migrateCfg(c){
+  (c.categories||[]).forEach(function(k){
+    if(k.id==='cat_lunch'){ k.name='餐食'; k.limit=1500; }
+  });
+  c.lockedItems = c.lockedItems || [];
+  if(!c.lockedItems.some(function(i){return /通勤/.test(i.name)}))
+    c.lockedItems.push({id:'l_commute', name:'通勤交通（上下班，免記帳）', amount:500, type:'expense'});
+  if(!c.lockedItems.some(function(i){return i.type==='locked'}))
+    c.lockedItems.push({id:'l_mpf', name:'MPF 自願供款（可扣稅）', amount:2000, type:'locked'});
+}
+function migrateAll(){
+  Object.keys(app.configs).forEach(function(m){ migrateCfg(app.configs[m]); });
+  app.ver = VER;
+}
 function loadLocal(){
   try{
-    var raw = localStorage.getItem(KEY); if(!raw) return false;
+    var raw = localStorage.getItem(KEY); if(!raw) return;
     var p = JSON.parse(raw);
     app.configs = p.configs||{}; app.transactions = p.transactions||[];
     app.investments = p.investments||[]; app.fx = p.fx||7.8;
-    return Object.keys(app.configs).length>0 || app.transactions.length>0 || app.investments.length>0;
-  }catch(e){ return false; }
+    app.opening = Object.assign({cash:0,mpf:0,mmf:0,stock:0}, p.opening||{});
+    if((p.ver||2) < VER){ migrateAll(); saveLocal(); }
+  }catch(e){}
 }
-function mark(month){ if(month) dirty['m-'+month]=1; }
-function save(months){
-  saveLocal();
-  (months||[]).forEach(mark);
-  if(dbCol) flush();
-}
-function saveFx(){ dirty['meta']=1; save([]); }
-function setSync(s){
-  syncState = s;
-  var el = document.getElementById('syncTxt');
-  el.className = 'sync' + (s==='ok'?' ok':(s==='err'?' err':''));
-  el.textContent = s==='ok' ? '☁ 已同步（跨裝置）' : s==='saving' ? '同步中…' : s==='err' ? '⚠ 同步失敗，資料仍存在本機' : '本機儲存（資料只在此裝置）';
-}
-function monthBody(m){
-  return {
-    config: app.configs[m] || null,
-    tx: app.transactions.filter(function(t){return t.month===m}),
-    inv: app.investments.filter(function(t){return t.month===m})
-  };
-}
-async function flush(){
-  if(flushing || !dbCol) return;
-  flushing = true; setSync('saving');
-  try{
-    while(Object.keys(dirty).length){
-      var k = Object.keys(dirty)[0]; delete dirty[k];
-      var ref = dbCol.doc(k);
-      if(k==='meta'){ await ref.set({fx:app.fx}); continue; }
-      var b = monthBody(k.slice(2));
-      if(!b.config && !b.tx.length && !b.inv.length) await ref.delete();
-      else await ref.set(b);
-    }
-    setSync('ok');
-  }catch(e){ console.error(e); setSync('err'); }
-  flushing = false;
-}
-async function initRemote(){
-  try{
-    var db = await claude.use('db'), user = await claude.use('user');
-    if(!db || !user) return;
-    var id = await user.id(); if(!id) return;
-    var col = db.collection('data/users/'+id);
-    var snap = await col.get();
-    if(!snap.empty){
-      var cfgs={}, tx=[], inv=[], fx=app.fx;
-      snap.docs.forEach(function(d){
-        var data = d.data()||{};
-        if(d.id==='meta'){ if(data.fx) fx=data.fx; return; }
-        if(d.id.indexOf('m-')!==0) return;
-        var m = d.id.slice(2);
-        if(data.config) cfgs[m]=data.config;
-        (data.tx||[]).forEach(function(t){tx.push(t)});
-        (data.inv||[]).forEach(function(t){inv.push(t)});
-      });
-      app.configs=cfgs; app.transactions=tx; app.investments=inv; app.fx=fx;
-      saveLocal();
-      dbCol = col; setSync('ok'); refresh();
-    }else{
-      dbCol = col;
-      // 雲端是空的：把本機資料全部上傳
-      Object.keys(app.configs).forEach(mark);
-      app.transactions.forEach(function(t){mark(t.month)});
-      app.investments.forEach(function(t){mark(t.month)});
-      dirty['meta']=1;
-      await flush();
-    }
-  }catch(e){ console.error(e); setSync('local'); }
-}
+function save(){ saveLocal(); }
 
+function cfgPeek(m){            // 讀取設定但不建立新月份
+  if(app.configs[m]) return app.configs[m];
+  var ks = Object.keys(app.configs).sort(), prior = null;
+  ks.forEach(function(k){ if(k<=m) prior = k; });
+  if(!prior && ks.length) prior = ks[ks.length-1];
+  return prior ? app.configs[prior] : defaultConfig();
+}
 function getCfg(m){
-  if(!app.configs[m]){
-    var ks = Object.keys(app.configs).sort(), prior = null;
-    ks.forEach(function(k){ if(k<=m) prior = k; });
-    if(!prior && ks.length) prior = ks[ks.length-1];
-    app.configs[m] = prior ? JSON.parse(JSON.stringify(app.configs[prior])) : defaultConfig();
-    saveLocal();
-  }
+  if(!app.configs[m]){ app.configs[m] = JSON.parse(JSON.stringify(cfgPeek(m))); saveLocal(); }
   return app.configs[m];
 }
 
@@ -527,13 +513,14 @@ function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,
 function money(n){ n=Number(n)||0; return (n<0?'-':'')+'$'+Math.abs(Math.round(n)).toLocaleString('en-US'); }
 function money2(n){ n=Number(n)||0; return '$'+n.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2}); }
 function sum(a,f){ return a.reduce(function(s,x){return s+(Number(f(x))||0)},0); }
+function $(id){ return document.getElementById(id); }
 function toast(msg,err){
-  var c=document.getElementById('toast'), t=document.createElement('div');
+  var c=$('toast'), t=document.createElement('div');
   t.className='toast'+(err?' err':''); t.textContent=msg; c.appendChild(t);
   setTimeout(function(){t.remove()},2600);
 }
-function openSheet(id){ document.getElementById(id).classList.add('on'); }
-function closeSheet(id){ document.getElementById(id).classList.remove('on'); }
+function openSheet(id){ $(id).classList.add('on'); }
+function closeSheet(id){ $(id).classList.remove('on'); }
 function goTab(t){
   document.querySelectorAll('.tab').forEach(function(s){s.classList.toggle('on', s.id==='tab-'+t)});
   document.querySelectorAll('nav button').forEach(function(b){b.classList.toggle('on', b.dataset.tab===t)});
@@ -543,16 +530,18 @@ function today(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth
 function uid(p){ return p+Date.now()+'_'+Math.random().toString(36).slice(2,6); }
 
 /* ================= 計算核心 ================= */
-function calc(){
-  var cfg = getCfg(cur);
-  var txs = app.transactions.filter(function(t){return t.month===cur});
-  var invs = app.investments.filter(function(t){return t.month===cur});
-  var fixed = sum(cfg.lockedItems.filter(function(i){return i.type!=='savings'}), function(i){return i.amount});
-  var plan  = sum(cfg.lockedItems.filter(function(i){return i.type==='savings'}), function(i){return i.amount});
+// 單月統計。type：expense=固定支出、locked=鎖定儲蓄(MPF)、savings=計劃投資
+function monthStats(m, cfg){
+  var txs  = app.transactions.filter(function(t){return t.month===m});
+  var invs = app.investments.filter(function(t){return t.month===m});
+  var li = cfg.lockedItems||[];
+  var fixed  = sum(li.filter(function(i){return i.type!=='savings' && i.type!=='locked'}), function(i){return i.amount});
+  var locked = sum(li.filter(function(i){return i.type==='locked'}),  function(i){return i.amount});
+  var plan   = sum(li.filter(function(i){return i.type==='savings'}), function(i){return i.amount});
   var budget = sum(cfg.categories, function(c){return c.limit});
-  var spent = sum(txs, function(t){return t.amount});
+  var spent  = sum(txs, function(t){return t.amount});
   var income = Number(cfg.income)||0;
-  var savings = income - fixed - spent;
+  var savings = income - fixed - spent;                 // 含 MPF、投資、現金
   var by = {BOC:{total:0,'BOC信用卡':0,'八達通':0}, HSBC:{total:0,'HSBC信用卡':0,'PayMe':0}, cash:0};
   txs.forEach(function(t){
     var p = payOf(t.paymentMethod), a = Number(t.amount)||0;
@@ -563,9 +552,27 @@ function calc(){
   var invMmf = sum(invs.filter(function(i){return i.assetType==='mmf'}), function(i){return i.amountHKD});
   var invStock = sum(invs.filter(function(i){return i.assetType!=='mmf'}), function(i){return i.amountHKD});
   var invTotal = invMmf + invStock;
-  return {cfg:cfg, txs:txs, invs:invs, fixed:fixed, plan:plan, budget:budget, spent:spent, income:income,
+  return {cfg:cfg, txs:txs, invs:invs, fixed:fixed, locked:locked, plan:plan, budget:budget, spent:spent, income:income,
           savings:savings, rate: income>0? savings/income*100 : 0, by:by,
-          invMmf:invMmf, invStock:invStock, invTotal:invTotal, cash: savings - invTotal};
+          invMmf:invMmf, invStock:invStock, invTotal:invTotal,
+          cash: savings - locked - invTotal};
+}
+function calc(){ return monthStats(cur, getCfg(cur)); }
+
+// 累計：起點 + 各「有記錄的月份」結餘（現金滾存到下個月）
+function cumulative(){
+  var set = {}; set[cur]=1;
+  app.transactions.forEach(function(t){ set[t.month]=1; });
+  app.investments.forEach(function(t){ set[t.month]=1; });
+  var months = Object.keys(set).filter(function(m){return m<=cur}).sort();
+  var o = app.opening || {};
+  var r = {cash:Number(o.cash)||0, mpf:Number(o.mpf)||0, mmf:Number(o.mmf)||0, stock:Number(o.stock)||0, n:months.length};
+  months.forEach(function(m){
+    var s = monthStats(m, cfgPeek(m));
+    r.cash += s.cash; r.mpf += s.locked; r.mmf += s.invMmf; r.stock += s.invStock;
+  });
+  r.total = r.cash + r.mpf + r.mmf + r.stock;
+  return r;
 }
 
 /* ================= 渲染 ================= */
@@ -573,7 +580,6 @@ function refresh(){
   var c = calc();
   renderHome(c); renderAddForm(c.cfg); renderFilters(c.cfg); renderList(); renderInv(c);
 }
-function $(id){ return document.getElementById(id); }
 
 function renderHome(c){
   var rem = c.budget - c.spent;
@@ -590,7 +596,7 @@ function renderHome(c){
   rb.textContent = (c.rate>=50?'✓ 儲蓄率 ':'⚠ 儲蓄率 ')+c.rate.toFixed(1)+'%';
   $('stIncome').textContent = money(c.income);
   $('stFixed').textContent = money(c.fixed);
-  $('stPlan').textContent = money(c.plan);
+  $('stPlan').textContent = money(c.locked + c.plan);
 
   $('reserveTotal').textContent = money(c.by.BOC.total + c.by.HSBC.total);
   $('bocTot').textContent = money(c.by.BOC.total);
@@ -599,20 +605,30 @@ function renderHome(c){
   $('hsbcSub').textContent = '直刷 '+money(c.by.HSBC['HSBC信用卡'])+' · PayMe '+money(c.by.HSBC['PayMe']);
   $('cashTot').textContent = money(c.by.cash);
 
-  // 儲蓄去向
+  // 本月儲蓄去向
   $('saveTotTxt').textContent = '共 '+money(c.savings);
-  var base = Math.max(c.savings, c.invTotal, 1);
   var cashPos = Math.max(0, c.cash);
-  var tot = c.invMmf + c.invStock + cashPos || 1;
+  var tot = c.invMmf + c.invStock + c.locked + cashPos || 1;
   $('saveSeg').innerHTML =
     '<i style="width:'+(c.invStock/tot*100)+'%;background:#6366f1"></i>'+
     '<i style="width:'+(c.invMmf/tot*100)+'%;background:#0ea5e9"></i>'+
+    '<i style="width:'+(c.locked/tot*100)+'%;background:#f59e0b"></i>'+
     '<i style="width:'+(cashPos/tot*100)+'%;background:#10b981"></i>';
   $('saveLeg').innerHTML =
     '<div><span class="dot" style="background:#6366f1"></span>股票 / VOO<b>'+money(c.invStock)+'</b></div>'+
     '<div><span class="dot" style="background:#0ea5e9"></span>貨幣基金<b>'+money(c.invMmf)+'</b></div>'+
-    '<div><span class="dot" style="background:#10b981"></span>現金（自動）<b style="color:'+(c.cash<0?'#e11d48':'inherit')+'">'+money(c.cash)+'</b></div>'+
-    '<div><span class="dot" style="background:#94a3b8"></span>儲蓄合計<b>'+money(c.savings)+'</b></div>';
+    '<div><span class="dot" style="background:#f59e0b"></span>MPF 鎖定<b>'+money(c.locked)+'</b></div>'+
+    '<div><span class="dot" style="background:#10b981"></span>現金（自動）<b style="color:'+(c.cash<0?'#e11d48':'inherit')+'">'+money(c.cash)+'</b></div>';
+
+  // 累計資產
+  var a = cumulative();
+  $('assetTotal').textContent = money(a.total);
+  $('assetSub').textContent = '已計 '+a.n+' 個月';
+  $('assetLeg').innerHTML =
+    '<div><span class="dot" style="background:#10b981"></span>現金累計<b style="color:'+(a.cash<0?'#e11d48':'inherit')+'">'+money(a.cash)+'</b></div>'+
+    '<div><span class="dot" style="background:#f59e0b"></span>MPF 累計<b>'+money(a.mpf)+'</b></div>'+
+    '<div><span class="dot" style="background:#0ea5e9"></span>貨幣基金累計<b>'+money(a.mmf)+'</b></div>'+
+    '<div><span class="dot" style="background:#6366f1"></span>股票累計<b>'+money(a.stock)+'</b></div>';
 
   // 預算池
   var box = $('pools'); box.innerHTML='';
@@ -631,9 +647,10 @@ function renderHome(c){
   });
 
   // 固定項目
-  $('locked').innerHTML = c.cfg.lockedItems.map(function(i){
-    var sv = i.type==='savings';
-    return '<div class="row"><div><div class="t">'+(sv?'🐖 ':'🏠 ')+esc(i.name)+'</div><div class="s">'+(sv?'計劃儲蓄／投資':'固定剛性支出')+'</div></div><div class="a num">'+money(i.amount)+'</div></div>';
+  $('locked').innerHTML = (c.cfg.lockedItems||[]).map(function(i){
+    var ic = i.type==='locked' ? '🔒 ' : (i.type==='savings' ? '🐖 ' : '🏠 ');
+    var sb = i.type==='locked' ? '鎖定儲蓄（不可動用，計入儲蓄率）' : (i.type==='savings' ? '計劃投資' : '固定支出，免記帳');
+    return '<div class="row"><div><div class="t">'+ic+esc(i.name)+'</div><div class="s">'+sb+'</div></div><div class="a num">'+money(i.amount)+'</div></div>';
   }).join('') || '<div class="sub">尚未設定</div>';
 }
 
@@ -680,11 +697,11 @@ function renderList(){
   box.innerHTML = list.map(function(t){
     var cat = cm[t.categoryId] || {name:'其他分類', icon:'🏷️'}, p = payOf(t.paymentMethod);
     var title = t.customLabel ? (cat.name+'・'+t.customLabel) : cat.name;
-    return '<div class="tx"><div class="em">'+esc(cat.icon||'🏷️')+'</div><div class="mid">'+
+    return '<div class="tx" onclick="editTx(\''+esc(t.id)+'\')"><div class="em">'+esc(cat.icon||'🏷️')+'</div><div class="mid">'+
       '<div class="t">'+esc(title)+'<span class="badge '+(p.card?'c':'o')+'">'+esc(p.label)+'</span></div>'+
       '<div class="s num">'+esc(t.date)+(t.note?' · '+esc(t.note):'')+'</div></div>'+
       '<div class="amt num">-'+money2(t.amount)+'</div>'+
-      '<button class="del" aria-label="刪除" onclick="askDelTx(\''+esc(t.id)+'\')">🗑</button></div>';
+      '<button class="del" aria-label="刪除" onclick="event.stopPropagation();askDelTx(\''+esc(t.id)+'\')">🗑</button></div>';
   }).join('');
 }
 
@@ -699,8 +716,8 @@ function renderInv(c){
   var pct = c.plan>0 ? c.invTotal/c.plan*100 : 0;
   $('invBar').style.width = Math.min(100,pct)+'%';
   $('invBar').className = pct>=100?'g':'a';
-  $('invBarTxt').textContent = c.plan>0 ? ('已完成計劃投資 '+Math.round(pct)+'%') : '尚未設定計劃投資（可在設定中新增「儲蓄/投資」項目）';
-  if(c.cash<0) $('invBarTxt').textContent += '　⚠ 投入已超過本月儲蓄';
+  $('invBarTxt').textContent = c.plan>0 ? ('已完成計劃投資 '+Math.round(pct)+'%') : '尚未設定計劃投資（可在設定中新增「計劃投資」項目）';
+  if(c.cash<0) $('invBarTxt').textContent += '　⚠ 已超過本月可用儲蓄';
   var box = $('invList');
   if(!invs.length){ box.innerHTML='<div class="empty">本月尚未記錄投資</div>'; return; }
   box.innerHTML = invs.map(function(i){
@@ -713,7 +730,7 @@ function renderInv(c){
   }).join('');
 }
 
-/* ================= 記帳 ================= */
+/* ================= 記帳 / 編輯 ================= */
 function quick(v){
   var el = $('txAmt');
   if(v===0){ el.value=''; el.focus(); return; }
@@ -731,7 +748,7 @@ function addTx(e){
             paymentMethod:selPay, note:$('txNote').value.trim()};
   if(cat && cat.custom) tx.customLabel = label;
   app.transactions.push(tx);
-  save([tx.month]);
+  save();
   $('txAmt').value=''; $('txNote').value=''; $('txCustom').value='';
   setMonth(tx.month);
   var p = payOf(selPay);
@@ -739,13 +756,49 @@ function addTx(e){
 }
 function askDelTx(id){
   $('delTitle').textContent='確定刪除此筆消費？';
-  $('delDesc').textContent='刪除後金額會即時退回預算池與可動用餘額。';
+  $('delDesc').textContent='刪除後金額會即時退回預算池與可動用餘額（退款也可用刪除處理）。';
   $('delGo').onclick = function(){
-    var t = app.transactions.find(function(x){return x.id===id});
     app.transactions = app.transactions.filter(function(x){return x.id!==id});
-    save(t?[t.month]:[]); closeSheet('delBack'); refresh(); toast('已刪除');
+    save(); closeSheet('delBack'); closeSheet('editBack'); refresh(); toast('已刪除');
   };
   openSheet('delBack');
+}
+function editTx(id){
+  var t = app.transactions.find(function(x){return x.id===id}); if(!t) return;
+  editId = id;
+  var cfg = cfgPeek(t.month);
+  $('eAmt').value = t.amount;
+  $('eCat').innerHTML = cfg.categories.map(function(c){
+    return '<option value="'+esc(c.id)+'"'+(c.id===t.categoryId?' selected':'')+'>'+esc(c.name)+'</option>';
+  }).join('');
+  $('ePay').innerHTML = PAY.map(function(p){
+    return '<option value="'+esc(p.key)+'"'+(p.key===payOf(t.paymentMethod).key?' selected':'')+'>'+esc(p.label)+(p.card?'（→'+p.card+'）':'')+'</option>';
+  }).join('');
+  $('eCust').value = t.customLabel || '';
+  $('eDate').value = t.date;
+  $('eNote').value = t.note || '';
+  eCatChange();
+  openSheet('editBack');
+}
+function eCatChange(){
+  var t = app.transactions.find(function(x){return x.id===editId}); if(!t) return;
+  var cat = cfgPeek(t.month).categories.find(function(c){return c.id===$('eCat').value});
+  $('eCustWrap').classList.toggle('hidden', !(cat && cat.custom));
+}
+function saveEdit(){
+  var t = app.transactions.find(function(x){return x.id===editId}); if(!t) return;
+  var amount = parseFloat($('eAmt').value);
+  if(!(amount>0)){ toast('請輸入大於 0 的金額',1); return; }
+  var cat = cfgPeek(t.month).categories.find(function(c){return c.id===$('eCat').value});
+  var label = $('eCust').value.trim();
+  if(cat && cat.custom && !label){ toast('請輸入自訂項目名稱',1); return; }
+  var date = $('eDate').value || t.date;
+  t.amount = amount; t.categoryId = $('eCat').value; t.paymentMethod = $('ePay').value;
+  t.date = date; t.month = date.slice(0,7); t.note = $('eNote').value.trim();
+  if(cat && cat.custom) t.customLabel = label; else delete t.customLabel;
+  save(); closeSheet('editBack');
+  if(t.month!==cur) setMonth(t.month); else refresh();
+  toast('已更新');
 }
 
 /* ================= 投資 ================= */
@@ -773,13 +826,13 @@ function addInv(e){
   if(invCur==='USD'){
     fx = parseFloat($('invFx').value);
     if(!(fx>0)){ toast('請輸入匯率',1); return; }
-    if(fx!==app.fx){ app.fx = fx; saveFx(); }
+    app.fx = fx;
   }
   var date = $('invDate').value || today();
   var rec = {id:uid('inv_'), month:date.slice(0,7), date:date, amount:amount, currency:invCur, fx:fx,
              amountHKD: Math.round(amount*fx*100)/100, assetType:invType, ticker:$('invTicker').value.trim().toUpperCase()};
   app.investments.push(rec);
-  save([rec.month]);
+  save();
   $('invAmt').value=''; $('invTicker').value=''; invHint();
   setMonth(rec.month);
   toast('已記錄投資 '+money(rec.amountHKD)+'，剩餘自動歸入現金');
@@ -788,9 +841,8 @@ function askDelInv(id){
   $('delTitle').textContent='確定刪除此筆投資記錄？';
   $('delDesc').textContent='刪除後該金額會重新歸入現金。';
   $('delGo').onclick = function(){
-    var t = app.investments.find(function(x){return x.id===id});
     app.investments = app.investments.filter(function(x){return x.id!==id});
-    save(t?[t.month]:[]); closeSheet('delBack'); refresh(); toast('已刪除');
+    save(); closeSheet('delBack'); refresh(); toast('已刪除');
   };
   openSheet('delBack');
 }
@@ -801,6 +853,8 @@ function openConfig(){
   $('cfgIncome').value = cfg.income;
   $('cfgLocked').innerHTML=''; cfg.lockedItems.forEach(function(i){ lockRow(i.name,i.amount,i.type); });
   $('cfgCats').innerHTML=''; cfg.categories.forEach(function(c){ catRow(c); });
+  var o = app.opening || {};
+  $('opCash').value = o.cash||0; $('opMpf').value = o.mpf||0; $('opMmf').value = o.mmf||0; $('opStock').value = o.stock||0;
   cfgPreview(); openSheet('cfgBack');
 }
 function lockRow(name,amount,type){
@@ -809,8 +863,9 @@ function lockRow(name,amount,type){
     '<input class="inp" type="text" placeholder="項目名稱" value="'+esc(name)+'" oninput="cfgPreview()">'+
     '<div class="r2"><select class="inp" style="flex:1" onchange="cfgPreview()">'+
       '<option value="expense"'+(type==='expense'?' selected':'')+'>固定支出</option>'+
-      '<option value="savings"'+(type==='savings'?' selected':'')+'>儲蓄/投資</option></select>'+
-    '<input class="inp num" style="width:110px" type="number" inputmode="decimal" placeholder="金額" value="'+esc(amount)+'" oninput="cfgPreview()">'+
+      '<option value="locked"'+(type==='locked'?' selected':'')+'>鎖定儲蓄（MPF）</option>'+
+      '<option value="savings"'+(type==='savings'?' selected':'')+'>計劃投資</option></select>'+
+    '<input class="inp num" style="width:100px" type="number" inputmode="decimal" placeholder="金額" value="'+esc(amount)+'" oninput="cfgPreview()">'+
     '<button class="x" type="button" onclick="this.closest(\'.crow\').remove();cfgPreview()">🗑</button></div>';
   $('cfgLocked').appendChild(d);
 }
@@ -847,26 +902,30 @@ function readCfg(){
 }
 function cfgPreview(){
   var c = readCfg();
-  var fixed = sum(c.lockedItems.filter(function(i){return i.type!=='savings'}),function(i){return i.amount});
-  var plan = sum(c.lockedItems.filter(function(i){return i.type==='savings'}),function(i){return i.amount});
+  var by = function(t){ return sum(c.lockedItems.filter(function(i){return i.type===t}),function(i){return i.amount}); };
+  var fixed = by('expense'), locked = by('locked'), plan = by('savings');
   var lim = sum(c.categories,function(i){return i.limit});
   var sv = c.income - fixed - lim, rate = c.income>0 ? sv/c.income*100 : 0;
   $('cfgPrev').innerHTML =
+    '<div class="rw"><span>固定支出合計</span><b>'+money(fixed)+'</b></div>'+
     '<div class="rw"><span>日常預算合計</span><b>'+money(lim)+'</b></div>'+
     '<div class="rw"><span>預算花滿時儲蓄率</span><b style="color:'+(rate>=50?'#059669':'#e11d48')+'">'+rate.toFixed(1)+'%（'+money(sv)+'）</b></div>'+
-    '<div class="rw"><span>其中計劃投資</span><b>'+money(plan)+'</b></div>'+
-    '<div class="rw"><span>預計自動歸現金</span><b>'+money(sv-plan)+'</b></div>';
+    '<div class="rw"><span>其中 MPF 鎖定 / 計劃投資</span><b>'+money(locked)+' / '+money(plan)+'</b></div>'+
+    '<div class="rw"><span>預計自動歸現金</span><b>'+money(sv-locked-plan)+'</b></div>';
 }
 function saveConfig(){
   var c = readCfg();
   if(!c.categories.length){ toast('請至少保留一個預算池',1); return; }
-  app.configs[cur] = c; save([cur]); closeSheet('cfgBack'); refresh(); toast('已更新本月設定');
+  app.configs[cur] = c;
+  app.opening = {cash:parseFloat($('opCash').value)||0, mpf:parseFloat($('opMpf').value)||0,
+                 mmf:parseFloat($('opMmf').value)||0, stock:parseFloat($('opStock').value)||0};
+  save(); closeSheet('cfgBack'); refresh(); toast('已更新設定');
 }
 function resetDefault(){
-  app.configs[cur] = defaultConfig(); save([cur]); openConfig(); refresh(); toast('已恢復預設範本');
+  app.configs[cur] = defaultConfig(); save(); openConfig(); refresh(); toast('已恢復預設範本');
 }
 
-/* ================= 備份 / 還原 / CSV（複製貼上，適合 iPhone） ================= */
+/* ================= 備份 / 還原 / CSV（複製貼上） ================= */
 function copyText(txt){
   var ta = $('dataText');
   return (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function(){
@@ -887,13 +946,10 @@ function openData(mode){
       try{
         var p = JSON.parse(ta.value), d = p.data||p;
         if(!d || !d.configs || !Array.isArray(d.transactions)) throw 0;
-        app = {configs:d.configs, transactions:d.transactions, investments:d.investments||[], fx:d.fx||7.8};
+        app = {configs:d.configs, transactions:d.transactions, investments:d.investments||[], fx:d.fx||7.8,
+               opening:Object.assign({cash:0,mpf:0,mmf:0,stock:0}, d.opening||{}), ver:d.ver||2};
+        if(app.ver < VER) migrateAll();
         saveLocal();
-        Object.keys(app.configs).forEach(mark);
-        app.transactions.forEach(function(t){mark(t.month)});
-        app.investments.forEach(function(t){mark(t.month)});
-        dirty['meta']=1;
-        if(dbCol) flush();
         closeSheet('dataBack'); closeSheet('cfgBack'); refresh(); toast('還原成功');
       }catch(e){ toast('格式不正確，無法還原',1); }
     };
@@ -932,6 +988,7 @@ window.addEventListener('load', function(){
   });
   refresh();
 });
+
 </script>
 </body>
 </html>
