@@ -53,6 +53,18 @@ main{padding:14px 14px 0}
 .stat{background:rgba(255,255,255,.07);border-radius:14px;padding:10px}
 .stat .k{font-size:11px;color:#94a3b8}.stat .v{font-size:15px;font-weight:700;margin-top:2px}
 
+/* 銀行真實可用現金重點卡片 */
+.cash-hero{background:linear-gradient(155deg,#064e3b,#065f46);color:#fff;border:0}
+.cash-hero .top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.cash-hero .lab{font-size:12px;color:#a7f3d0;font-weight:600}
+.cash-hero .big{font-size:38px;font-weight:800;letter-spacing:-.5px;margin:4px 0 2px}
+.cash-hero .desc{font-size:12px;color:#d1fae5;line-height:1.5}
+.cash-hero .calbtn{padding:6px 11px;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;font-weight:700;min-height:32px;border:1px solid rgba(255,255,255,.22)}
+.cash-hero .calbtn:active{background:rgba(255,255,255,.25)}
+.cash-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.cash-box{background:rgba(0,0,0,.18);border-radius:12px;padding:9px 11px}
+.cash-box .k{font-size:11px;color:#a7f3d0}.cash-box .v{font-size:15px;font-weight:700;margin-top:2px}
+
 .reserve{background:var(--indigo-l);border-radius:16px;padding:14px;margin-bottom:12px}
 .reserve .v{font-size:30px;font-weight:800;color:var(--indigo)}
 .reserve .k{font-size:12px;font-weight:600;color:#312e81}
@@ -181,8 +193,9 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
 <main>
   <!-- ============ 總覽 ============ -->
   <section id="tab-home" class="tab on">
+    <!-- 1. 本月日常預算與儲蓄率 -->
     <div class="card hero">
-      <div class="lab">日常可動用餘額</div>
+      <div class="lab">日常可動用餘額（本月預算池）</div>
       <div class="big num" id="remain">$0</div>
       <div class="of num">/ 本月日常預算 <span id="totBudget">$0</span></div>
       <div style="margin-top:14px">
@@ -199,6 +212,30 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
       </div>
     </div>
 
+    <!-- 2. 銀行真實可用現金（核心重點卡片） -->
+    <div class="card cash-hero">
+      <div class="top-row">
+        <span class="lab">🏦 銀行真實可用現金（截至所選月份）</span>
+        <button class="calbtn" onclick="openCashCal()">校準月初現金</button>
+      </div>
+      <div class="big num" id="realCashBig">$0</div>
+      <div class="desc num" id="realCashDesc">期初結轉 $0 + 本月現金淨增減 $0</div>
+      <div class="cash-grid num">
+        <div class="cash-box">
+          <div class="k" id="cashOpenLabel">月初實際銀行現金</div>
+          <div class="v" id="cashOpenVal">$0</div>
+        </div>
+        <div class="cash-box">
+          <div class="k">本月銀行現金淨增減</div>
+          <div class="v" id="cashDeltaVal">$0</div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:#a7f3d0;margin-top:10px;line-height:1.5" id="cashFormulaHint">
+        只有「現金消費、固定支出、MPF、投資、實際還卡數」會扣減銀行現金；信用卡刷卡待還款時才扣。
+      </div>
+    </div>
+
+    <!-- 3. 信用卡待還款預留與月初還款核銷 -->
     <div class="card">
       <h2>
         <span class="l">💳 信用卡待還款預留</span>
@@ -211,44 +248,40 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
       </div>
       <div class="row">
         <div><div class="t"><span class="dot" style="background:#be123c"></span>BOC 信用卡</div>
-          <div class="s num" id="bocSub">本月直刷 $0 · 八達通 $0</div></div>
+          <div class="s num" id="bocSub">本月刷 $0 · 本月已還 $0</div></div>
         <div class="a num" id="bocTot">$0</div>
       </div>
       <div class="row">
         <div><div class="t"><span class="dot" style="background:#dc2626"></span>HSBC 信用卡</div>
-          <div class="s num" id="hsbcSub">本月直刷 $0 · PayMe $0</div></div>
+          <div class="s num" id="hsbcSub">本月刷 $0 · 本月已還 $0</div></div>
         <div class="a num" id="hsbcTot">$0</div>
       </div>
       <div class="row">
-        <div><div class="t"><span class="dot" style="background:#059669"></span>現金消費（即時已扣）</div></div>
+        <div><div class="t"><span class="dot" style="background:#059669"></span>本月現金消費（已從銀行現金扣除）</div></div>
         <div class="a num" id="cashTot">$0</div>
       </div>
       <div id="repayListWrap"></div>
       <div class="note" style="margin-top:8px">
-        八達通 → 計入 BOC；PayMe → 計入 HSBC。<b>「記錄月初還款」</b>只會核銷待還款餘額並扣減實際現金流，<b>不會</b>重複扣減本月日常預算或拉低儲蓄率。
+        八達通 → 計入 BOC；PayMe → 計入 HSBC。<b>「記錄月初還款」</b>會抵銷待還款餘額並從上方<b>「銀行真實可用現金」</b>扣除，<b>不會</b>重複扣減本月日常預算或拉低儲蓄率。
       </div>
     </div>
 
+    <!-- 4. 本月損益與儲蓄去向 -->
     <div class="card">
       <h2><span class="l">🎯 本月損益與儲蓄去向</span><span class="sub num" id="saveTotTxt"></span></h2>
       <div class="seg" id="saveSeg"></div>
       <div class="leg num" id="saveLeg"></div>
-      <div class="hint" id="saveHint">本月儲蓄 = 收入 − 固定支出 − 已花日常。MPF 為鎖定儲蓄；在「投資」頁記錄的金額歸入貨幣基金／股票，其餘為本月現金淨增。</div>
+      <div class="hint" id="saveHint"></div>
     </div>
 
-    <div class="card">
-      <h2><span class="l">🏦 累計真實資產（至所選月份）</span><span class="sub num" id="assetSub"></span></h2>
-      <div class="reserve" style="background:#ecfdf5"><div class="k" style="color:#065f46">累計淨資產總額</div><div class="v num" id="assetTotal" style="color:#047857">$0</div></div>
-      <div class="leg num" id="assetLeg"></div>
-      <div class="hint">現金累計已扣除「月初還款」支出，與你銀行戶口真實可用現金對齊。股票和貨幣基金為累計投入本金，不含盈虧。起點及上月遺留卡數可在設定裡填。</div>
-    </div>
-
+    <!-- 5. 日常預算池 -->
     <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 10px">
       <b style="font-size:15px">📊 日常預算池</b>
       <button class="sub" style="font-weight:700;color:var(--green);min-height:36px" onclick="openConfig()">調整上限</button>
     </div>
     <div id="pools"></div>
 
+    <!-- 6. 每月固定項目 -->
     <div class="card">
       <h2><span class="l">🔒 每月固定項目</span></h2>
       <div id="locked"></div>
@@ -364,12 +397,29 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
   <button data-tab="inv" onclick="goTab('inv')"><span class="ic">📈</span>投資</button>
 </div></nav>
 
+<!-- 校準月初銀行現金抽屜 -->
+<div class="back" id="cashCalBack" onclick="if(event.target===this)closeSheet('cashCalBack')">
+  <div class="sheet">
+    <div class="grab"></div>
+    <h3>🏦 校準本月期初銀行現金</h3>
+    <div class="sub">當你在上月底做完清算（例如 11 月底發薪扣完房貸、MPF 和卡數後，銀行實剩 $2,700），直接在此設定 <b id="calMonthLabel"></b> 月初的銀行實際現金起點。</div>
+    <form onsubmit="saveCashCal(event)">
+      <label class="f">本月期初銀行現金 (HKD)</label>
+      <div class="amount"><span>$</span><input class="inp num" id="calCashInp" type="number" inputmode="decimal" step="0.1" placeholder="2700" required></div>
+      <div class="hint" id="calPreviewHint">設定後，該月銀行真實可用現金 = 期初銀行現金 + 該月現金淨增減（不會受過去歷史月份未結清數據干擾）。</div>
+      <button class="btn" type="submit">✓ 確認校準本月起點</button>
+      <button class="btn ghost" type="button" onclick="clearCashCal()">清除本月手動起點（改為自動沿用上月結餘）</button>
+      <button class="btn ghost" type="button" onclick="closeSheet('cashCalBack')">取消</button>
+    </form>
+  </div>
+</div>
+
 <!-- 月初還款核銷抽屜 -->
 <div class="back" id="repayBack" onclick="if(event.target===this)closeSheet('repayBack')">
   <div class="sheet">
     <div class="grab"></div>
     <h3>💳 記錄信用卡還款（結清帳單）</h3>
-    <div class="sub">用於月初繳交上月卡數或期中還款。此筆金額會核銷待還款餘額並從「真實可用現金」扣除，<b>不影響</b>本月預算池與儲蓄率。</div>
+    <div class="sub">用於月初繳交上月卡數或期中還款。此筆金額會核銷待還款餘額並從「銀行真實可用現金」扣除，<b>不影響</b>本月預算池與儲蓄率。</div>
     <form onsubmit="addRepay(event)">
       <label class="f">還款金額 (HKD)</label>
       <div class="amount"><span>$</span><input class="inp num" id="rpAmt" type="number" inputmode="decimal" step="0.1" min="0" placeholder="0" required></div>
@@ -404,16 +454,14 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
     <div class="cfg-sec"><div class="hd"><span>3. 日常預算池上限</span><button class="add" onclick="addCatRow()">＋ 新增</button></div>
       <div id="cfgCats"></div></div>
 
-    <div class="cfg-sec"><div class="hd">4. 累計起點（開始記帳前的初始狀態）</div>
+    <div class="cfg-sec"><div class="hd">4. 銀行現金錨點與未還卡數起點</div>
       <div class="grid2">
-        <div><div class="sub">銀行初始現金</div><input class="inp num" id="opCash" type="number" inputmode="decimal"></div>
-        <div><div class="sub">MPF 鎖定</div><input class="inp num" id="opMpf" type="number" inputmode="decimal"></div>
-        <div style="margin-top:8px"><div class="sub">貨幣基金（投入）</div><input class="inp num" id="opMmf" type="number" inputmode="decimal"></div>
-        <div style="margin-top:8px"><div class="sub">股票（投入）</div><input class="inp num" id="opStock" type="number" inputmode="decimal"></div>
+        <div><div class="sub" id="cfgMonthCashLbl">本月期初銀行現金（留空=承接上月）</div><input class="inp num" id="cfgOpeningCash" type="number" inputmode="decimal" placeholder="自動承接上月"></div>
+        <div><div class="sub">全域初始銀行現金（最早起點）</div><input class="inp num" id="opCash" type="number" inputmode="decimal"></div>
         <div style="margin-top:8px"><div class="sub">起點遺留 BOC 卡數</div><input class="inp num" id="opBocDebt" type="number" inputmode="decimal" placeholder="0"></div>
         <div style="margin-top:8px"><div class="sub">起點遺留 HSBC 卡數</div><input class="inp num" id="opHsbcDebt" type="number" inputmode="decimal" placeholder="0"></div>
       </div>
-      <div class="sub" style="margin-top:6px">若開始使用本帳本前仍有上月未還卡數，可填在上方「起點遺留卡數」，月初還款時便能自動抵銷。</div>
+      <div class="sub" style="margin-top:6px">若你在某月底已完成清算（例如 11 月底結算完，12 月初銀行實剩 $2,700），在「本月期初銀行現金」填入 2700 即可作為新的精準起點。</div>
     </div>
 
     <div class="preview num" id="cfgPrev"></div>
@@ -474,7 +522,7 @@ textarea.inp{min-height:180px;font-size:13px;font-family:ui-monospace,Menlo,mono
 <script>
 /* ================= 常數 ================= */
 var KEY = 'hk_budget_mobile_v2';   // 沿用同一個 key，舊資料完全保留
-var VER = 4;
+var VER = 5;
 var PAY = [
   {key:'BOC信用卡',  label:'BOC 信用卡', sub:'直刷',       card:'BOC',  em:'💳'},
   {key:'八達通',     label:'八達通',     sub:'→ 計入 BOC',  card:'BOC',  em:'🚇'},
@@ -496,6 +544,7 @@ var cur = '', selCat = '', selPay = 'BOC信用卡', invCur = 'HKD', invType = 's
 function defaultConfig(){
   return {
     income: 32500,
+    openingCash: null, // 若設定數字，代表該月期初銀行真實可用現金錨點
     lockedItems: [
       {id:'l1', name:'房子按揭還款',            amount:12500, type:'expense'},
       {id:'l2', name:'通勤交通（上下班，免記帳）', amount:500,   type:'expense'},
@@ -526,6 +575,7 @@ function migrateCfg(c){
     c.lockedItems.push({id:'l_commute', name:'通勤交通（上下班，免記帳）', amount:500, type:'expense'});
   if(!c.lockedItems.some(function(i){return i.type==='locked'}))
     c.lockedItems.push({id:'l_mpf', name:'MPF 自願供款（可扣稅）', amount:2000, type:'locked'});
+  if(c.openingCash === undefined) c.openingCash = null;
 }
 function migrateAll(){
   Object.keys(app.configs).forEach(function(m){ migrateCfg(app.configs[m]); });
@@ -551,10 +601,15 @@ function cfgPeek(m){
   var ks = Object.keys(app.configs).sort(), prior = null;
   ks.forEach(function(k){ if(k<=m) prior = k; });
   if(!prior && ks.length) prior = ks[ks.length-1];
-  return prior ? app.configs[prior] : defaultConfig();
+  if(prior){
+    var copy = JSON.parse(JSON.stringify(app.configs[prior]));
+    copy.openingCash = null; // 單月現金校準錨點不自動複製到下個月
+    return copy;
+  }
+  return defaultConfig();
 }
 function getCfg(m){
-  if(!app.configs[m]){ app.configs[m] = JSON.parse(JSON.stringify(cfgPeek(m))); saveLocal(); }
+  if(!app.configs[m]){ app.configs[m] = cfgPeek(m); saveLocal(); }
   return app.configs[m];
 }
 
@@ -591,7 +646,7 @@ function monthStats(m, cfg){
   var budget = sum(cfg.categories, function(c){return c.limit});
   var spent  = sum(txs, function(t){return t.amount});
   var income = Number(cfg.income)||0;
-  var savings = income - fixed - spent; // 會計損益儲蓄（不受還款影響）
+  var savings = income - fixed - spent; // 會計損益儲蓄（決定儲蓄率）
   var by = {BOC:{total:0,'BOC信用卡':0,'八達通':0}, HSBC:{total:0,'HSBC信用卡':0,'PayMe':0}, cash:0};
   txs.forEach(function(t){
     var p = payOf(t.paymentMethod), a = Number(t.amount)||0;
@@ -607,9 +662,8 @@ function monthStats(m, cfg){
   var invStock = sum(invs.filter(function(i){return i.assetType!=='mmf'}), function(i){return i.amountHKD});
   var invTotal = invMmf + invStock;
 
-  // 銀行戶口真實現金流變化：
-  // 收入 - 固定支出 - 現金消費 - MPF - 投資 - 本月實際還卡數
-  // （刷卡當下未扣銀行現金，等到月初還款才真正從銀行扣走）
+  // 銀行真實可用現金增減：
+  // 只有真正影響銀行活期戶口的現金流才加減（刷卡消費等月底/下月初還款時才從銀行扣走）
   var realCashDelta = income - fixed - by.cash - locked - invTotal - repTotal;
 
   return {
@@ -618,50 +672,67 @@ function monthStats(m, cfg){
     savings:savings, rate: income>0? savings/income*100 : 0, by:by,
     repBOC:repBOC, repHSBC:repHSBC, repTotal:repTotal,
     invMmf:invMmf, invStock:invStock, invTotal:invTotal,
-    accrualCash: savings - locked - invTotal, // 權責制現金（假設當月卡數全清）
-    realCashDelta: realCashDelta              // 收付制銀行真實現金增減
+    realCashDelta: realCashDelta
   };
 }
 function calc(){ return monthStats(cur, getCfg(cur)); }
 
-// 累計資產與待還卡數（截至所選月份 cur）
+// 銀行真實可用現金與待還卡數計算（支援單月期初現金校準錨點）
 function cumulative(){
   var set = {}; set[cur]=1;
   app.transactions.forEach(function(t){ set[t.month]=1; });
   app.investments.forEach(function(t){ set[t.month]=1; });
   (app.repayments||[]).forEach(function(r){ set[r.month]=1; });
+  Object.keys(app.configs||{}).forEach(function(m){ set[m]=1; });
   var months = Object.keys(set).filter(function(m){return m<=cur}).sort();
   var o = app.opening || {};
-  var r = {
-    realCash: Number(o.cash)||0,
-    mpf: Number(o.mpf)||0,
-    mmf: Number(o.mmf)||0,
-    stock: Number(o.stock)||0,
-    bocCharged: Number(o.bocDebt)||0,
-    hsbcCharged: Number(o.hsbcDebt)||0,
-    bocRepaid: 0,
-    hsbcRepaid: 0,
-    n: months.length
-  };
+
+  var realCash = Number(o.cash)||0;
+  var monthOpenCash = realCash;
+  var hasAnchor = false;
+  var anchorMonth = null;
+
+  var bocCharged = Number(o.bocDebt)||0;
+  var hsbcCharged = Number(o.hsbcDebt)||0;
+  var bocRepaid = 0;
+  var hsbcRepaid = 0;
+
   months.forEach(function(m){
-    var s = monthStats(m, cfgPeek(m));
-    r.realCash += s.realCashDelta;
-    r.mpf += s.locked;
-    r.mmf += s.invMmf;
-    r.stock += s.invStock;
-    r.bocCharged += s.by.BOC.total;
-    r.hsbcCharged += s.by.HSBC.total;
-    r.bocRepaid += s.repBOC;
-    r.hsbcRepaid += s.repHSBC;
+    var cfg = cfgPeek(m);
+    // 若該月設有期初銀行現金校準錨點（例如 11月底結算完，12月初直接從 2700 算起），則覆寫期初餘額
+    if(cfg.openingCash !== null && cfg.openingCash !== undefined && cfg.openingCash !== '' && !isNaN(Number(cfg.openingCash))){
+      realCash = Number(cfg.openingCash);
+      hasAnchor = true;
+      anchorMonth = m;
+    }
+    if(m === cur){
+      monthOpenCash = realCash;
+    }
+    var s = monthStats(m, cfg);
+    realCash += s.realCashDelta;
+    bocCharged += s.by.BOC.total;
+    hsbcCharged += s.by.HSBC.total;
+    bocRepaid += s.repBOC;
+    hsbcRepaid += s.repHSBC;
   });
-  r.bocDue = r.bocCharged - r.bocRepaid;
-  r.hsbcDue = r.hsbcCharged - r.hsbcRepaid;
-  r.totalDue = r.bocDue + r.hsbcDue;
-  r.totalCharged = r.bocCharged + r.hsbcCharged;
-  r.totalRepaid = r.bocRepaid + r.hsbcRepaid;
-  // 淨資產 = 銀行真實現金 + MPF + 基金 + 股票 - 尚未還清的卡數
-  r.netWorth = r.realCash + r.mpf + r.mmf + r.stock - Math.max(0, r.totalDue);
-  return r;
+
+  var bocDue = bocCharged - bocRepaid;
+  var hsbcDue = hsbcCharged - hsbcRepaid;
+  var totalDue = bocDue + hsbcDue;
+  var totalCharged = bocCharged + hsbcCharged;
+  var totalRepaid = bocRepaid + hsbcRepaid;
+
+  return {
+    monthOpenCash: monthOpenCash,
+    realCash: realCash,
+    hasAnchor: hasAnchor,
+    anchorMonth: anchorMonth,
+    bocDue: bocDue,
+    hsbcDue: hsbcDue,
+    totalDue: totalDue,
+    totalCharged: totalCharged,
+    totalRepaid: totalRepaid
+  };
 }
 
 /* ================= 渲染 ================= */
@@ -671,6 +742,7 @@ function refresh(){
 }
 
 function renderHome(c, a){
+  // 1. 頂部日常預算與儲蓄率
   var rem = c.budget - c.spent;
   $('remain').textContent = money(rem);
   $('remain').style.color = rem<0 ? '#fb7185' : (rem < c.budget*0.2 ? '#fcd34d' : '#fff');
@@ -687,7 +759,17 @@ function renderHome(c, a){
   $('stFixed').textContent = money(c.fixed);
   $('stPlan').textContent = money(c.locked + c.plan);
 
-  // 信用卡待還款與本月還款核銷
+  // 2. 銀行真實可用現金卡片
+  $('realCashBig').textContent = money(a.realCash);
+  $('realCashBig').style.color = a.realCash < 0 ? '#fda4af' : '#fff';
+  $('realCashDesc').textContent = '月初現金 '+money(a.monthOpenCash)+' + 本月銀行現金淨增減 '+(c.realCashDelta>=0?'+':'')+money(c.realCashDelta);
+  $('cashOpenLabel').textContent = (c.cfg.openingCash !== null && c.cfg.openingCash !== undefined && c.cfg.openingCash !== '') ? '月初銀行現金（已手動校準）' : '月初銀行現金（承接上月）';
+  $('cashOpenVal').textContent = money(a.monthOpenCash);
+  $('cashDeltaVal').textContent = (c.realCashDelta>=0?'+':'')+money(c.realCashDelta);
+  $('cashDeltaVal').style.color = c.realCashDelta < 0 ? '#fda4af' : '#6ee7b7';
+  $('cashFormulaHint').innerHTML = '本月銀行現金淨增減 = 收入('+money(c.income)+') − 固定('+money(c.fixed)+') − 現金消費('+money(c.by.cash)+') − MPF('+money(c.locked)+') − 投資('+money(c.invTotal)+') − 本月還卡數('+money(c.repTotal)+')。';
+
+  // 3. 信用卡待還款與本月還款核銷
   $('reserveTotal').textContent = money(a.totalDue);
   $('reserveTotal').style.color = a.totalDue > 0 ? 'var(--indigo)' : '#059669';
   $('reserveSub').textContent = '累計刷卡 '+money(a.totalCharged)+' − 累計已還 '+money(a.totalRepaid)+'（含起點卡數）';
@@ -714,7 +796,7 @@ function renderHome(c, a){
     rWrap.innerHTML = '';
   }
 
-  // 本月損益與儲蓄去向
+  // 4. 本月損益與儲蓄去向
   $('saveTotTxt').textContent = '會計儲蓄 '+money(c.savings);
   var cashPos = Math.max(0, c.realCashDelta);
   var tot = c.invMmf + c.invStock + c.locked + cashPos || 1;
@@ -729,18 +811,9 @@ function renderHome(c, a){
     '<div><span class="dot" style="background:#f59e0b"></span>MPF 鎖定<b>'+money(c.locked)+'</b></div>'+
     '<div><span class="dot" style="background:#10b981"></span>本月銀行現金淨增減<b style="color:'+(c.realCashDelta<0?'#e11d48':'inherit')+'">'+money(c.realCashDelta)+'</b></div>';
 
-  $('saveHint').innerHTML = '本月銀行現金淨增減 = 收入('+money(c.income)+') − 固定('+money(c.fixed)+') − 現金消費('+money(c.by.cash)+') − MPF('+money(c.locked)+') − 投資('+money(c.invTotal)+') − 本月還卡數('+money(c.repTotal)+')。';
+  $('saveHint').innerHTML = '會計儲蓄（'+money(c.savings)+'）決定本月是否達成 50% 儲蓄率；「本月銀行現金淨增減」則反映扣除還卡數與投資後，戶口現金的實際變化。';
 
-  // 累計真實資產
-  $('assetTotal').textContent = money(a.netWorth);
-  $('assetSub').textContent = '已計 '+a.n+' 個月（已扣未還卡數）';
-  $('assetLeg').innerHTML =
-    '<div><span class="dot" style="background:#10b981"></span>銀行真實可用現金<b style="color:'+(a.realCash<0?'#e11d48':'inherit')+'">'+money(a.realCash)+'</b></div>'+
-    '<div><span class="dot" style="background:#f59e0b"></span>MPF 累計<b>'+money(a.mpf)+'</b></div>'+
-    '<div><span class="dot" style="background:#0ea5e9"></span>貨幣基金累計<b>'+money(a.mmf)+'</b></div>'+
-    '<div><span class="dot" style="background:#6366f1"></span>股票累計<b>'+money(a.stock)+'</b></div>';
-
-  // 預算池
+  // 5. 預算池
   var box = $('pools'); box.innerHTML='';
   c.cfg.categories.forEach(function(cat){
     var sp = sum(c.txs.filter(function(t){return t.categoryId===cat.id}), function(t){return t.amount});
@@ -756,7 +829,7 @@ function renderHome(c, a){
     box.appendChild(d);
   });
 
-  // 固定項目
+  // 6. 固定項目
   $('locked').innerHTML = (c.cfg.lockedItems||[]).map(function(i){
     var ic = i.type==='locked' ? '🔒 ' : (i.type==='savings' ? '🐖 ' : '🏠 ');
     var sb = i.type==='locked' ? '鎖定儲蓄（不可動用，計入儲蓄率）' : (i.type==='savings' ? '計劃投資' : '固定支出，免記帳');
@@ -840,12 +913,38 @@ function renderInv(c){
   }).join('');
 }
 
+/* ================= 校準月初銀行現金 ================= */
+function openCashCal(){
+  var cfg = getCfg(cur), a = cumulative();
+  $('calMonthLabel').textContent = cur;
+  $('calCashInp').value = (cfg.openingCash !== null && cfg.openingCash !== undefined && cfg.openingCash !== '') ? cfg.openingCash : Math.round(a.monthOpenCash*100)/100;
+  openSheet('cashCalBack');
+}
+function saveCashCal(e){
+  e.preventDefault();
+  var val = parseFloat($('calCashInp').value);
+  if(isNaN(val)){ toast('請輸入有效的金額',1); return; }
+  var cfg = getCfg(cur);
+  cfg.openingCash = val;
+  save();
+  closeSheet('cashCalBack');
+  refresh();
+  toast('已設定 '+cur+' 月初銀行現金為 '+money2(val));
+}
+function clearCashCal(){
+  var cfg = getCfg(cur);
+  cfg.openingCash = null;
+  save();
+  closeSheet('cashCalBack');
+  refresh();
+  toast('已清除手動起點，改為自動承接上月結餘');
+}
+
 /* ================= 月初還款核銷 ================= */
 function openRepay(){
   var a = cumulative();
   $('rpDate').value = today();
   $('rpNote').value = '';
-  // 預設帶入目前待還款金額（若 BOC 有欠款優先帶 BOC，否則帶 HSBC）
   if(a.bocDue > 0){ setRpCard('BOC'); $('rpAmt').value = Math.round(a.bocDue*100)/100; }
   else if(a.hsbcDue > 0){ setRpCard('HSBC'); $('rpAmt').value = Math.round(a.hsbcDue*100)/100; }
   else { setRpCard('BOC'); $('rpAmt').value = ''; }
@@ -876,7 +975,7 @@ function addRepay(e){
   save();
   closeSheet('repayBack');
   if(rec.month !== cur) setMonth(rec.month); else refresh();
-  toast('已核銷 '+rpCard+' 卡數 '+money2(amount)+'（不計入本月支出）');
+  toast('已核銷 '+rpCard+' 卡數 '+money2(amount)+'（已從銀行現金扣除）');
 }
 function askDelRepay(id){
   $('delTitle').textContent='確定刪除此筆還款紀錄？';
@@ -1011,11 +1110,10 @@ function openConfig(){
   $('cfgIncome').value = cfg.income;
   $('cfgLocked').innerHTML=''; cfg.lockedItems.forEach(function(i){ lockRow(i.name,i.amount,i.type); });
   $('cfgCats').innerHTML=''; cfg.categories.forEach(function(c){ catRow(c); });
+  $('cfgMonthCashLbl').textContent = cur + ' 期初銀行現金（留空=承接上月）';
+  $('cfgOpeningCash').value = (cfg.openingCash !== null && cfg.openingCash !== undefined) ? cfg.openingCash : '';
   var o = app.opening || {};
   $('opCash').value = o.cash||0;
-  $('opMpf').value = o.mpf||0;
-  $('opMmf').value = o.mmf||0;
-  $('opStock').value = o.stock||0;
   $('opBocDebt').value = o.bocDebt||0;
   $('opHsbcDebt').value = o.hsbcDebt||0;
   cfgPreview(); openSheet('cfgBack');
@@ -1061,7 +1159,9 @@ function readCfg(){
     if(r.querySelector('input[type=checkbox]').checked) o.custom = true;
     categories.push(o);
   });
-  return {income:parseFloat($('cfgIncome').value)||0, lockedItems:lockedItems, categories:categories};
+  var ocRaw = $('cfgOpeningCash').value.trim();
+  var openingCash = ocRaw === '' ? null : (parseFloat(ocRaw) || 0);
+  return {income:parseFloat($('cfgIncome').value)||0, openingCash:openingCash, lockedItems:lockedItems, categories:categories};
 }
 function cfgPreview(){
   var c = readCfg();
@@ -1080,14 +1180,11 @@ function saveConfig(){
   var c = readCfg();
   if(!c.categories.length){ toast('請至少保留一個預算池',1); return; }
   app.configs[cur] = c;
-  app.opening = {
+  app.opening = Object.assign(app.opening||{}, {
     cash:parseFloat($('opCash').value)||0,
-    mpf:parseFloat($('opMpf').value)||0,
-    mmf:parseFloat($('opMmf').value)||0,
-    stock:parseFloat($('opStock').value)||0,
     bocDebt:parseFloat($('opBocDebt').value)||0,
     hsbcDebt:parseFloat($('opHsbcDebt').value)||0
-  };
+  });
   save(); closeSheet('cfgBack'); refresh(); toast('已更新設定');
 }
 function resetDefault(){
